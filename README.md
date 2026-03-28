@@ -53,5 +53,5 @@ PIWEB – 2A20 | 2025–2026
 
 ## Getting Started
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/votre-username/Esprit-PIDEV-3A-2026-SkillSwap.git
+   ```bash[
+   git clone https://github.com/chaimalamine/Esprit-PIWEB-2A20-2026-SkillSwap.git
