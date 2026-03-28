@@ -41,11 +41,11 @@ MVC Pattern (Model-View-Controller)
 ## Contributors
 | Student | Module |
 
-| Student A | Users & Skills |
-| Student B | Offers & Requests |
-| Student C | groups & group members |
-| Student D | events & registration |
-| Student E | Reputation & recommendation |
+| Eyette chouikha | Users & Skills |
+| Seifeddine Lahbib | Offers & Requests |
+| Yasmin Cherif | groups & group members |
+| Chaima Lamine | events & registration |
+|  Malek Wertani | Reputation & recommendation |
 
 ## Academic Context
 Developed at **Esprit School of Engineering – Tunisia**
