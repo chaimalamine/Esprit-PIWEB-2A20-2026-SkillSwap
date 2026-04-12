@@ -21,7 +21,6 @@
 <div class="container">
     <h1>SkillSwap - Gestion des Événements</h1>
 
-    <!-- Liste des événements -->
     <h2>Liste des événements</h2>
     <table>
         <tr>
@@ -30,9 +29,13 @@
             <th>Description</th>
             <th>Lieu</th>
             <th>Date</th>
-            <th>Action</th> <!-- Nouvelle colonne -->
+            <th>Action</th> 
         </tr>
         <?php 
+        // transforme les données brutes venant de la base de données 
+        // (via $events) en lignes HTML lisibles dans un tableau, avec pour chaque événement ses informations
+        //  et un bouton de suppression sécurisé, ou affiche un message d'absence si la liste est vide.
+
         if (!empty($events)) {
             foreach ($events as $e) {
                 echo '<tr>';
@@ -41,7 +44,7 @@
                 echo '<td>' . htmlspecialchars($e->getDescription()) . '</td>';
                 echo '<td>' . htmlspecialchars($e->getLocation()) . '</td>';
                 echo '<td>' . $e->getDate() . '</td>';
-                // Bouton Supprimer avec confirmation JS
+                // Bouton Supp
                 echo '<td><a href="index.php?action=delete&id=' . $e->getId() . '" class="btn btn-delete" onclick="return confirm(\'Voulez-vous vraiment supprimer cet événement ?\');">Supprimer</a></td>';
                 echo '</tr>';
             }
@@ -51,19 +54,19 @@
         ?>
     </table>
 
-    <!-- Formulaire d'ajout -->
+    <!-- Formulaire ajout -->
+
     <div class="form-box">
         <h2>Ajouter un événement</h2>
         <form action="index.php" method="POST">
             <input type="hidden" name="action" value="add">
-            <input type="text" name="title" placeholder="Titre de l'événement" required>
-            <textarea name="description" placeholder="Description" rows="3" required></textarea>
-            <input type="text" name="location" placeholder="Lieu" required>
-            <input type="datetime-local" name="date" required>
+            <input type="text" name="title" placeholder="Titre de l'événement" >
+            <textarea name="description" placeholder="Description" rows="3" ></textarea>
+            <input type="text" name="location" placeholder="Lieu" >
+            <input type="datetime-local" name="date" >
             <button type="submit" class="btn">Publier</button>
         </form>
     </div>
 </div>
-
 </body>
 </html>

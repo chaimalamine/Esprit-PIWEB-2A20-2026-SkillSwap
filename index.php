@@ -1,22 +1,17 @@
 <?php
-//  TRÈS IMPORTANT : Charger la classe AVANT la session
-// PHP a besoin de connaître la classe pour reconstruire les objets stockés en session.
 require_once 'model/Event.php';
-
-//  Démarrer la session
 session_start();
-
-//  Inclure le contrôleur
 require_once 'controller/EventController.php';
 
 $controller = new EventController();
 
-// Gestion de l'inscription 
+// Gestion des inscri  
 if(isset($_GET['action']) && $_GET['action'] == 'register') {
     echo "<script>alert('Inscription réussie !');</script>";
 }
 
-// Récupérer la liste des événements
+// Récupérer liste événements depuis la Base de donnes
+
 $events = $controller->listeEvents();
 ?>
 <!DOCTYPE html>
@@ -25,7 +20,7 @@ $events = $controller->listeEvents();
 <meta charset="UTF-8">
 <title>SkillSwap - Échange de compétences</title>
 <style>
-    /* --- RESET ET BASE --- */
+  
     body {
         margin: 0;
         font-family: 'Segoe UI', sans-serif;
@@ -33,7 +28,7 @@ $events = $controller->listeEvents();
         color: #333;
     }
 
-    /* --- NAVBAR --- */
+    /* NAVBAR */
     .navbar {
         display: flex;
         justify-content: space-between;
@@ -73,7 +68,7 @@ $events = $controller->listeEvents();
     }
     .navbar button:hover { transform: scale(1.05); }
 
-    /* --- HERO SECTION --- */
+    /* HERO SECTION */
     .hero {
         text-align: center;
         padding: 80px 20px 120px;
@@ -91,17 +86,17 @@ $events = $controller->listeEvents();
     .hero span { color: #fde68a; }
     .hero p { font-size: 18px; opacity: 0.9; }
 
-    /* --- SECTION ÉVÉNEMENTS --- */
+    /*SECTION ÉVÉNEMENTS*/
     .events-container {
         max-width: 1000px;
-        margin: -60px auto 50px; /* 👈 auto maintient le bloc centré */
+        margin: -60px auto 50px; 
         padding: 0 20px;
         position: relative;
         z-index: 10;
     }
 
     .section-title {
-        text-align: left;      /* 👈 Titre aligné à gauche uniquement */
+        text-align: left;      
         color: white;
         font-size: 28px;
         margin-bottom: 20px;
@@ -155,7 +150,7 @@ $events = $controller->listeEvents();
     }
     .btn-register:hover { background: #5a1db8; }
 
-    /* --- STEPS SECTION --- */
+    /* STEPS SECTION */
     .section {
         padding: 60px 20px;
         text-align: center;
@@ -179,7 +174,7 @@ $events = $controller->listeEvents();
 
     .step h3 { color: #7b2ff7; }
 
-    /* --- SKILLS SECTION --- */
+    
     .skills {
         display: flex;
         justify-content: center;
@@ -196,7 +191,7 @@ $events = $controller->listeEvents();
         font-weight: bold;
     }
 
-    /* --- FOOTER --- */
+    
     footer {
         text-align: center;
         padding: 30px;
@@ -230,16 +225,21 @@ $events = $controller->listeEvents();
     <h2 class="section-title">--Événements à venir--</h2>
 
     <?php 
+    // ✅ CORRECTION : Utilisation de $e['nom_colonne'] au lieu de $e->getMethod()
+    // PDO retourne des tableaux associatifs par défaut
     if (!empty($events)) {
         foreach ($events as $e) {
+            // Formatage de la date pour l'affichage
+            $dateAffichee = !empty($e['date_debut']) ? date('d/m/Y', strtotime($e['date_debut'])) : 'Date non définie';
+            
             echo '
             <div class="event-card">
                 <div class="event-info">
-                    <h3>' . htmlspecialchars($e->getTitle()) . '</h3>
-                    <p>' . htmlspecialchars($e->getDescription()) . '</p>
-                    <span class="event-meta">📍 ' . htmlspecialchars($e->getLocation()) . ' | 🕒 ' . $e->getDate() . '</span>
+                    <h3>' . htmlspecialchars($e['titre']) . '</h3>
+                    <p>' . htmlspecialchars($e['description']) . '</p>
+                    <span class="event-meta">📍 ' . htmlspecialchars($e['lieu']) . ' | 🕒 ' . $dateAffichee . '</span>
                 </div>
-                <a href="?action=register&id=' . $e->getId() . '" class="btn-register">S\'inscrire</a>
+                <a href="?action=register&id=' . $e['id_evenement'] . '" class="btn-register">S\'inscrire</a>
             </div>';
         }
     } else {
