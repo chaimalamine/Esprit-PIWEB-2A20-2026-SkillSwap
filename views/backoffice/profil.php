@@ -43,14 +43,20 @@ if(!isset($_SESSION['user_id'])) {
         .btn-danger { background: #fee2e2; color: #b91c1c; }
         .btn-danger:hover { background: #fecaca; }
         .success-message { background: #d1fae5; color: #047857; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #047857; }
-    </style>
+   .skill-tag.debutant { background: #bbf7d0; color: #166534; }
+.skill-tag.intermediaire { background: #fef3c7; color: #92400e; }
+.skill-tag.expert { background: #fecaca; color: #991b1b; }
+.skill-tag small { font-size: 10px; opacity: 0.8; }
+   
+   
+   </style>
 </head>
 <body>
     <div class="sidebar">
         <h2>SkillSwap</h2>
         <a href="design.php">Dashboard</a>
         <a href="liste_users.php">Liste des utilisateurs</a>
-        <a href="#">Mes Compétences</a>
+        <a href="mes_competences.php">Mes Compétences</a>
         <a href="#">Offres</a>
         <a href="#">Messages</a>
         <a href="profil.php" style="background: rgba(255,255,255,0.2);">Profil</a>
@@ -90,17 +96,9 @@ if(!isset($_SESSION['user_id'])) {
                 </div>
 
                 <div class="bio-box">
-                    <label>Bio / Présentation</label>
-                    <p>Aucune bio définie pour le moment.</p>
-                </div>
-
-                <div class="skills-area">
-                    <label>Mes Compétences</label>
-                    <div class="skill-tags">
-                        <span class="skill-tag empty-skill">Aucune compétence ajoutée</span>
-                    </div>
-                </div>
-
+    <label>Bio / Présentation</label>
+    <p><?php echo !empty($_SESSION['user_bio']) ? $_SESSION['user_bio'] : 'Aucune bio définie pour le moment.'; ?></p>
+</div>
                 <div class="actions">
                     <a href="modifier_profil.php" class="btn btn-edit" style="text-decoration: none; display: inline-block;">✏️ Modifier le profil</a>
                     <a href="http://localhost/projetwebfinal/controllers/UserC.php?action=deleteProfile" class="btn btn-danger" style="text-decoration: none; display: inline-block;" onclick="return confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')">🗑️ Supprimer le compte</a>

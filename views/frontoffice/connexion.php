@@ -37,9 +37,9 @@
 </head>
 <body>
     <div class="navbar">
-        <a href="../frontoffice/frontdesign.php"><h2>SkillSwap</h2></a>
+        <a href="frontdesign.php"><h2>SkillSwap</h2></a>
         <div>
-            <a href="../frontoffice/frontdesign.php">Accueil</a>
+            <a href="frontdesign.php">Accueil</a>
             <a href="#">Explorer</a>
             <a href="#">Proposer</a>
             <button onclick="window.location.href='connexion.php'">Commencer</button>
@@ -61,7 +61,7 @@
             <form action="http://localhost/projetwebfinal/controllers/UserC.php?action=login" method="POST" id="loginForm">
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="text" name="email" id="email" placeholder="exemple@email.com" value="<?php echo $_POST['email'] ?? ''; ?>">
+                    <input type="text" name="email" id="email" placeholder="exemple@email.com" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
                     <div class="validation-message" id="emailMessage"></div>
                 </div>
 

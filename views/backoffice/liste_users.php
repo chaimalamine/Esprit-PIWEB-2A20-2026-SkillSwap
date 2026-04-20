@@ -4,6 +4,62 @@ include '../../controllers/UserC.php';
 
 $userC = new UserC();
 
+// --- EXPORT CSV ---
+if (isset($_GET['export']) && $_GET['export'] == 'csv') {
+    // Récupérer les mêmes données (avec recherche/tri appliqués)
+    $search = isset($_GET['search']) ? $_GET['search'] : '';
+    $tri = isset($_GET['tri']) ? $_GET['tri'] : '';
+    
+    if ($search != '') {
+        $usersData = $userC->searchUser($search);
+    } elseif ($tri != '') {
+        $usersData = $userC->sortUser($tri);
+    } else {
+        $usersData = $userC->listeUser();
+    }
+    
+    // Convertir en tableau si nécessaire
+    if (is_object($usersData)) {
+        $usersList = array();
+        while ($row = $usersData->fetch()) {
+            $usersList[] = $row;
+        }
+        $usersData = $usersList;
+    }
+    
+    // Définir les en-têtes pour forcer le téléchargement
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="utilisateurs_' . date('Y-m-d') . '.csv"');
+    
+    // Créer le fichier CSV
+    $output = fopen('php://output', 'w');
+    
+    // Ajouter BOM pour UTF-8 (gère les accents)
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+    
+    // En-têtes des colonnes
+    fputcsv($output, array('ID', 'Nom', 'Prenom', 'Email', 'Statut', 'Score_Reputation', 'Badge_Confiance', 'Date_Inscription'), ';');
+    
+    // Ajouter les données
+    if ($usersData && count($usersData) > 0) {
+        foreach ($usersData as $user) {
+            fputcsv($output, array(
+                $user['id_utilisateur'],
+                $user['nom'],
+                $user['prenom'],
+                $user['email'],
+                $user['statut'],
+                $user['score_reputation'],
+                $user['badge_confiance'],
+                date('d/m/Y', strtotime($user['date_inscription']))
+            ), ';');
+        }
+    }
+    
+    fclose($output);
+    exit();
+}
+
 // --- SUPPRESSION ---
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -66,22 +122,26 @@ $edit_id = isset($_GET['edit_id']) ? $_GET['edit_id'] : '';
     <title>Gestion Utilisateurs - SkillSwap</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fc; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eef2f7; display: flex; }
         
-        .sidebar { width: 240px; background: linear-gradient(180deg, #a8b5f5 0%, #c4b5fd 100%); color: #4c1d95; height: 100vh; padding: 25px 15px; position: fixed; box-shadow: 2px 0 8px rgba(0,0,0,0.05); }
-        .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 24px; }
-        .sidebar a { display: block; color: #5b21b6; text-decoration: none; margin: 10px 0; padding: 10px 15px; border-radius: 8px; font-weight: 500; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.5); transform: translateX(4px); }
+        .sidebar { width: 220px; background: linear-gradient(180deg, #6a11cb, #2575fc); color: white; height: 100vh; padding: 20px; position: fixed; }
+        .sidebar h2 { text-align: center; margin-bottom: 20px; }
+        .sidebar a { display: block; color: white; text-decoration: none; margin: 15px 0; padding: 10px; border-radius: 5px; }
+        .sidebar a:hover { background: rgba(255,255,255,0.2); }
+        .sidebar a.active { background: rgba(255,255,255,0.2); }
         
-        .main { margin-left: 240px; padding: 30px; }
+        .main { margin-left: 220px; padding: 20px; flex: 1; }
         .header { background: white; padding: 20px 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 25px; }
         .header h2 { color: #4c1d95; font-size: 24px; }
         
         .filters { background: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .filters input, .filters select { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; }
-        .filters input:focus { outline: none; border-color: #a8b5f5; }
-        .filters button { padding: 8px 16px; background: #a8b5f5; color: #4c1d95; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
-        .filters a { padding: 8px 16px; background: #cbd5e1; color: #475569; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px; }
+        .filters input:focus { outline: none; border-color: #2575fc; }
+        .filters button { padding: 8px 16px; background: #2575fc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .filters button:hover { background: #6a11cb; }
+        .filters a { padding: 8px 16px; background: #e2e8f0; color: #475569; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px; }
+        .btn-export { padding: 8px 16px; background: linear-gradient(90deg, #10b981, #059669); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; text-decoration: none; display: inline-block; transition: 0.3s; }
+        .btn-export:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
         
         .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         table { width: 100%; border-collapse: collapse; }
@@ -90,7 +150,7 @@ $edit_id = isset($_GET['edit_id']) ? $_GET['edit_id'] : '';
         tr:hover { background: #fafafa; }
         
         td input, td select { width: 100%; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 5px; font-size: 13px; background: #fff; }
-        td input:focus, td select:focus { border-color: #a8b5f5; outline: none; }
+        td input:focus, td select:focus { border-color: #2575fc; outline: none; }
         
         .btn { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 12px; font-weight: 600; margin: 0 2px; transition: 0.2s; }
         .btn-edit { background: #93c5fd; color: #1e40af; }
@@ -110,8 +170,12 @@ $edit_id = isset($_GET['edit_id']) ? $_GET['edit_id'] : '';
     <div class="sidebar">
         <h2>SkillSwap</h2>
         <a href="design.php">Dashboard</a>
-        <a href="liste_users.php" class="active">Gestion Users</a>
-        <a href="profil.php">Mon Profil</a>
+        <a href="liste_users.php" class="active">Liste des utilisateurs</a>
+        <a href="mes_competences.php">Mes Compétences</a>
+        <a href="#">Offres</a>
+        <a href="#">Messages</a>
+        <a href="profil.php">Profil</a>
+        <a href="../frontoffice/frontdessign.php" style="margin-top: 30px; background: rgba(255,255,255,0.1);">← Retour au site</a>
     </div>
 
     <div class="main">
@@ -137,6 +201,7 @@ $edit_id = isset($_GET['edit_id']) ? $_GET['edit_id'] : '';
             <?php if($search != '' || $tri != ''): ?>
                 <a href="liste_users.php">Réinitialiser</a>
             <?php endif; ?>
+            <a href="?export=csv&search=<?php echo urlencode($search); ?>&tri=<?php echo urlencode($tri); ?>" class="btn-export">📊 Exporter CSV</a>
         </div>
 
         <div class="table-container">

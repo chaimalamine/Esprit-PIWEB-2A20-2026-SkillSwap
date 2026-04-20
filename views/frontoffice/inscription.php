@@ -36,9 +36,9 @@
 </head>
 <body>
     <div class="navbar">
-        <a href="../frontoffice/frontdessign.php"><h2>SkillSwap</h2></a>
+        <a href="frontdesign.php"><h2>SkillSwap</h2></a>
         <div>
-            <a href="../frontoffice/frontdesign.php">Accueil</a>
+            <a href="frontdesign.php">Accueil</a>
             <a href="#">Explorer</a>
             <a href="#">Proposer</a>
             <button onclick="window.location.href='inscription.php'">Commencer</button>
@@ -56,31 +56,31 @@
             <form action="http://localhost/projetwebfinal/controllers/UserC.php?action=register" method="POST" id="registerForm">
                 <div class="form-group">
                     <label>Nom</label>
-                    <input type="text" name="nom" id="nom" placeholder="Ton nom de famille" value="<?php echo $_POST['nom'] ?? ''; ?>">
+                    <input type="text" name="nom" id="nom" placeholder="Ton nom de famille" value="<?php echo isset($_POST['nom']) ? htmlspecialchars($_POST['nom']) : ''; ?>">
                     <div class="validation-message" id="nomMessage"></div>
                 </div>
 
                 <div class="form-group">
                     <label>Prénom</label>
-                    <input type="text" name="prenom" id="prenom" placeholder="Ton prénom" value="<?php echo $_POST['prenom'] ?? ''; ?>">
+                    <input type="text" name="prenom" id="prenom" placeholder="Ton prénom" value="<?php echo isset($_POST['prenom']) ? htmlspecialchars($_POST['prenom']) : ''; ?>">
                     <div class="validation-message" id="prenomMessage"></div>
                 </div>
 
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="text" name="email" id="email" placeholder="exemple@email.com" value="<?php echo $_POST['email'] ?? ''; ?>">
+                    <input type="text" name="email" id="email" placeholder="exemple@email.com" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
                     <div class="validation-message" id="emailMessage"></div>
                 </div>
 
                 <div class="form-group">
                     <label>Mot de passe</label>
-                    <input type="password" name="mot_de_passe" id="mot_de_passe" placeholder="••••••••">
-                    <div class="validation-message" id="mdpMessage"></div>
+                    <input type="password" name="mot_de_passe" id="password" placeholder="••••••••">
+                    <div class="validation-message" id="passwordMessage"></div>
                 </div>
 
                 <div class="form-group">
                     <label>Confirmer le mot de passe</label>
-                    <input type="password" name="confirm_mot_de_passe" id="confirm_mot_de_passe" placeholder="••••••••">
+                    <input type="password" name="confirm_mot_de_passe" id="confirmPassword" placeholder="••••••••">
                     <div class="validation-message" id="confirmMessage"></div>
                 </div>
 
@@ -94,29 +94,27 @@
     </div>
 
     <script>
+        // RÉFÉRENCES DES ÉLÉMENTS
         const nomInput = document.getElementById('nom');
         const prenomInput = document.getElementById('prenom');
         const emailInput = document.getElementById('email');
-        const mdpInput = document.getElementById('mot_de_passe');
-        const confirmInput = document.getElementById('confirm_mot_de_passe');
-        
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirmPassword');
         const nomMessage = document.getElementById('nomMessage');
         const prenomMessage = document.getElementById('prenomMessage');
         const emailMessage = document.getElementById('emailMessage');
-        const mdpMessage = document.getElementById('mdpMessage');
+        const passwordMessage = document.getElementById('passwordMessage');
         const confirmMessage = document.getElementById('confirmMessage');
-        
         const submitBtn = document.getElementById('submitBtn');
         
+        // ÉTATS DE VALIDATION
         let nomValid = false;
         let prenomValid = false;
         let emailValid = false;
-        let mdpValid = false;
+        let passwordValid = false;
         let confirmValid = false;
         
-        const nameRegex = /^[A-Za-zÀ-ÿ\s-]{2,}$/;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
+        // VALIDATION DU NOM
         function validateNom() {
             const nom = nomInput.value.trim();
             
@@ -125,10 +123,10 @@
                 nomMessage.textContent = '';
                 nomMessage.classList.remove('valid', 'invalid');
                 nomValid = false;
-            } else if (!nameRegex.test(nom)) {
+            } else if (nom.length < 2) {
                 nomInput.classList.add('invalid');
                 nomInput.classList.remove('valid');
-                nomMessage.textContent = '❌ Min 2 lettres, pas de chiffres';
+                nomMessage.textContent = '❌ Le nom doit contenir au moins 2 caractères';
                 nomMessage.classList.add('invalid');
                 nomMessage.classList.remove('valid');
                 nomValid = false;
@@ -143,6 +141,7 @@
             updateSubmitButton();
         }
         
+        // VALIDATION DU PRÉNOM
         function validatePrenom() {
             const prenom = prenomInput.value.trim();
             
@@ -151,10 +150,10 @@
                 prenomMessage.textContent = '';
                 prenomMessage.classList.remove('valid', 'invalid');
                 prenomValid = false;
-            } else if (!nameRegex.test(prenom)) {
+            } else if (prenom.length < 2) {
                 prenomInput.classList.add('invalid');
                 prenomInput.classList.remove('valid');
-                prenomMessage.textContent = '❌ Min 2 lettres, pas de chiffres';
+                prenomMessage.textContent = '❌ Le prénom doit contenir au moins 2 caractères';
                 prenomMessage.classList.add('invalid');
                 prenomMessage.classList.remove('valid');
                 prenomValid = false;
@@ -169,8 +168,10 @@
             updateSubmitButton();
         }
         
+        // VALIDATION DE L'EMAIL
         function validateEmail() {
             const email = emailInput.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             
             if (email === '') {
                 emailInput.classList.remove('valid', 'invalid');
@@ -195,35 +196,38 @@
             updateSubmitButton();
         }
         
-        function validateMdp() {
-            const mdp = mdpInput.value;
+        // VALIDATION DU MOT DE PASSE
+        function validatePassword() {
+            const password = passwordInput.value;
             
-            if (mdp === '') {
-                mdpInput.classList.remove('valid', 'invalid');
-                mdpMessage.textContent = '';
-                mdpMessage.classList.remove('valid', 'invalid');
-                mdpValid = false;
-            } else if (mdp.length < 6) {
-                mdpInput.classList.add('invalid');
-                mdpInput.classList.remove('valid');
-                mdpMessage.textContent = '❌ Mot de passe trop court (min 6 caractères)';
-                mdpMessage.classList.add('invalid');
-                mdpMessage.classList.remove('valid');
-                mdpValid = false;
+            if (password === '') {
+                passwordInput.classList.remove('valid', 'invalid');
+                passwordMessage.textContent = '';
+                passwordMessage.classList.remove('valid', 'invalid');
+                passwordValid = false;
+            } else if (password.length < 4) {
+                passwordInput.classList.add('invalid');
+                passwordInput.classList.remove('valid');
+                passwordMessage.textContent = '❌ Le mot de passe doit contenir au moins 4 caractères';
+                passwordMessage.classList.add('invalid');
+                passwordMessage.classList.remove('valid');
+                passwordValid = false;
             } else {
-                mdpInput.classList.add('valid');
-                mdpInput.classList.remove('invalid');
-                mdpMessage.textContent = '✅ Mot de passe fort';
-                mdpMessage.classList.add('valid');
-                mdpMessage.classList.remove('invalid');
-                mdpValid = true;
+                passwordInput.classList.add('valid');
+                passwordInput.classList.remove('invalid');
+                passwordMessage.textContent = '✅ Mot de passe valide';
+                passwordMessage.classList.add('valid');
+                passwordMessage.classList.remove('invalid');
+                passwordValid = true;
             }
+            // Revalider la confirmation quand le mot de passe change
             validateConfirm();
             updateSubmitButton();
         }
         
+        // VALIDATION DE LA CONFIRMATION
         function validateConfirm() {
-            const mdp = mdpInput.value;
+            const password = passwordInput.value;
             const confirm = confirmInput.value;
             
             if (confirm === '') {
@@ -231,7 +235,7 @@
                 confirmMessage.textContent = '';
                 confirmMessage.classList.remove('valid', 'invalid');
                 confirmValid = false;
-            } else if (mdp !== confirm) {
+            } else if (password !== confirm) {
                 confirmInput.classList.add('invalid');
                 confirmInput.classList.remove('valid');
                 confirmMessage.textContent = '❌ Les mots de passe ne correspondent pas';
@@ -241,7 +245,7 @@
             } else {
                 confirmInput.classList.add('valid');
                 confirmInput.classList.remove('invalid');
-                confirmMessage.textContent = '✅ Les mots de passe correspondent';
+                confirmMessage.textContent = '✅ Mots de passe identiques';
                 confirmMessage.classList.add('valid');
                 confirmMessage.classList.remove('invalid');
                 confirmValid = true;
@@ -249,8 +253,9 @@
             updateSubmitButton();
         }
         
+        // ACTIVE/DÉSACTIVE LE BOUTON
         function updateSubmitButton() {
-            if (nomValid && prenomValid && emailValid && mdpValid && confirmValid) {
+            if (nomValid && prenomValid && emailValid && passwordValid && confirmValid) {
                 submitBtn.disabled = false;
                 submitBtn.classList.add('enabled');
             } else {
@@ -259,20 +264,19 @@
             }
         }
         
+        // ÉCOUTEURS D'ÉVÉNEMENTS
         nomInput.addEventListener('input', validateNom);
         prenomInput.addEventListener('input', validatePrenom);
         emailInput.addEventListener('input', validateEmail);
-        mdpInput.addEventListener('input', function() {
-            validateMdp();
-            validateConfirm();
-        });
+        passwordInput.addEventListener('input', validatePassword);
         confirmInput.addEventListener('input', validateConfirm);
         
+        // VALIDATION AU CHARGEMENT
         window.addEventListener('load', function() {
             if (nomInput.value.trim() !== '') validateNom();
             if (prenomInput.value.trim() !== '') validatePrenom();
             if (emailInput.value.trim() !== '') validateEmail();
-            if (mdpInput.value !== '') validateMdp();
+            if (passwordInput.value !== '') validatePassword();
             if (confirmInput.value !== '') validateConfirm();
         });
     </script>
