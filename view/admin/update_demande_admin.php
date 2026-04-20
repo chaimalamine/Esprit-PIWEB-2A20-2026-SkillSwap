@@ -5,42 +5,40 @@ $base = '/SkillSwap';
 $dc   = new DemandeC();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
-    $existing = $dc->getDemande((int)$_POST['id']);
     $d = new Demande(
         $_POST['titre'],
         $_POST['description'],
         $_POST['competence_souhaitee'] ?? '',
         $_POST['urgence']              ?? 'normale',
         $_POST['date_creation']        ?? date('Y-m-d H:i:s'),
-        $existing['statut']            ?? 'en_attente'
+        $_POST['statut']               ?? 'en_attente'
     );
     $dc->updateDemande($d, (int)$_POST['id']);
-    header('Location: ' . $base . '/view/demande/liste_demande.php');
-    exit;
+    header('Location: ' . $base . '/view/admin/liste_demande_admin.php'); exit;
 }
 
 if (!isset($_GET['id'])) { die('ID manquant'); }
 $demande = $dc->getDemande((int)$_GET['id']);
 if (!$demande) { die('Demande introuvable'); }
 
-include __DIR__ . '/../layout_shared.php';
+include __DIR__ . '/layout_admin.php';
 ?>
 
-<div class="page-header">
-    <div class="header-row">
+<div style="margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-            <h1>Modifier la demande</h1>
-            <p>Mettez à jour les informations de votre demande</p>
+            <h1 style="color:#1a0533;margin:0;">Modifier la demande</h1>
+            <p style="color:#999;font-size:14px;margin-top:4px;">Modifiez les informations et le statut de la demande</p>
         </div>
-        <a href="<?= $base ?>/view/demande/liste_demande.php" class="btn btn-gray btn-sm">← Retour</a>
+        <a href="<?= $base ?>/view/admin/liste_demande_admin.php" class="btn btn-ghost btn-sm">← Retour</a>
     </div>
 </div>
 
 <div class="form-wrapper">
     <div class="form-card">
-        <h2>Modifier les détails</h2>
+        <h2>Détails de la demande</h2>
         <?php
-        $statut = $demande['statut'] ?? 'en_attente';
+        $statut     = $demande['statut'] ?? 'en_attente';
         $badgeClass = match($statut) { 'approuve' => 'badge-approved', 'rejete' => 'badge-rejected', default => 'badge-pending' };
         $badgeLabel = match($statut) { 'approuve' => '✅ Approuvée', 'rejete' => '❌ Rejetée', default => '⏳ En attente' };
         ?>
@@ -65,7 +63,7 @@ include __DIR__ . '/../layout_shared.php';
             <div class="form-row">
                 <div class="form-group">
                     <label for="competence_souhaitee">Compétence souhaitée</label>
-                    <input type="text" id="competence_souhaitee" name="competence_souhaitee" value="<?= htmlspecialchars($demande['competence_souhaitee'] ?? '') ?>" placeholder="Ex : Guitare, Photoshop…">
+                    <input type="text" id="competence_souhaitee" name="competence_souhaitee" value="<?= htmlspecialchars($demande['competence_souhaitee'] ?? '') ?>" placeholder="Ex : Guitare…">
                     <span id="competenceMsg" class="field-msg"></span>
                 </div>
                 <div class="form-group">
@@ -78,25 +76,34 @@ include __DIR__ . '/../layout_shared.php';
                 </div>
             </div>
 
+            <div class="form-group">
+                <label for="statut">Statut de publication</label>
+                <select id="statut" name="statut">
+                    <option value="approuve"   <?= $statut === 'approuve'   ? 'selected' : '' ?>>✅ Approuvée (Publiée)</option>
+                    <option value="en_attente" <?= $statut === 'en_attente' ? 'selected' : '' ?>>⏳ En attente</option>
+                    <option value="rejete"     <?= $statut === 'rejete'     ? 'selected' : '' ?>>❌ Rejetée</option>
+                </select>
+            </div>
+
             <div class="form-actions">
-                <button type="submit" class="btn btn-purple">Enregistrer les modifications</button>
-                <a href="<?= $base ?>/view/demande/liste_demande.php" class="btn btn-gray">Annuler</a>
+                <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                <a href="<?= $base ?>/view/admin/liste_demande_admin.php" class="btn btn-ghost">Annuler</a>
             </div>
         </form>
     </div>
 
     <div class="info-panel">
-        <h3>ℹ️ Informations</h3>
-        <p>La modification ne change pas le statut de validation de votre demande.</p>
+        <h3>🔧 Contrôle Admin</h3>
+        <p>Vous pouvez modifier le contenu et changer le statut de publication.</p>
         <ul>
-            <li>✏️ Modifiez librement</li>
-            <li>🔒 Le statut reste inchangé</li>
-            <li>👁️ Seules les demandes approuvées sont visibles</li>
+            <li>✅ Approuvée → visible sur le site</li>
+            <li>⏳ En attente → masquée du public</li>
+            <li>❌ Rejetée → masquée du public</li>
         </ul>
         <div class="info-notice">
-            💡 Si votre demande a été rejetée, modifiez-la et contactez l'administrateur.
+            ⚠️ Changer le statut vers <strong>En attente</strong> ou <strong>Rejetée</strong> masquera cette demande immédiatement.
         </div>
     </div>
 </div>
 
-</div></body></html>
+</div></div></body></html>
