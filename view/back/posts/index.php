@@ -21,18 +21,41 @@ $posts = $pc->listPosts();
         .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
         .admin-table th, .admin-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         .admin-table th { background: #6a11cb; color: white; }
-        .btn-edit { background: #2575fc; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; }
-        .btn-delete { background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; margin-left: 5px; }
+        .btn-edit { background: #2575fc; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; display: inline-block; }
+        .btn-delete { background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; border: none; font-size: 12px; cursor: pointer; }
         .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 400px;
+            text-align: center;
+        }
+        .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        .btn-confirm { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+        .btn-cancel { background: #ccc; color: #333; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
-    <a href="../groupes/index.php">📁 Groupes</a>
-    <a href="index.php">📝 Posts</a>
-    <a href="../commentaires/index.php">💬 Commentaires</a>
+    <a href="../groupes/index.php"> Groupes</a>
+    <a href="index.php"> Posts</a>
+    <a href="../commentaires/index.php"> Commentaires</a>
 </div>
 
 <div class="main">
@@ -60,15 +83,57 @@ $posts = $pc->listPosts();
                     <td><?= $post['datepost'] ?></td>
                     <td>
                         <a href="edit.php?id=<?= $post['idpost'] ?>" class="btn-edit">Modifier</a>
-                        <a href="delete.php?id=<?= $post['idpost'] ?>" class="btn-delete" onclick="return confirm('Supprimer ?')">Supprimer</a>
+                        <button class="btn-delete" onclick="openDeleteModal(<?= $post['idpost'] ?>, '<?= htmlspecialchars($post['titre']) ?>')">Supprimer</button>
                     </a>
                 </tr>
                 <?php endforeach; ?>
             <?php else: ?>
-                <td><td colspan="6">Aucun post trouvé</a></td>
+                <tr><td colspan="6">Aucun post trouvé</a></td>
             <?php endif; ?>
         </tbody>
     </table>
 </div>
+
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3>Confirmation de suppression</h3>
+        <p id="modalMessage">Voulez-vous vraiment supprimer ce post ?</p>
+        <div class="modal-actions">
+            <button class="btn-confirm" id="confirmDelete">Oui, supprimer</button>
+            <button class="btn-cancel" onclick="closeDeleteModal()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let deleteId = null;
+    let deleteUrl = '';
+
+    function openDeleteModal(id, titre) {
+        deleteId = id;
+        deleteUrl = 'delete.php?id=' + id;
+        document.getElementById('modalMessage').innerHTML = 'Voulez-vous vraiment supprimer le post <strong>"' + titre + '"</strong> ?';
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteId = null;
+    }
+
+    document.getElementById('confirmDelete').onclick = function() {
+        if (deleteId) {
+            window.location.href = deleteUrl;
+        }
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target === modal) {
+            closeDeleteModal();
+        }
+    }
+</script>
+
 </body>
 </html>

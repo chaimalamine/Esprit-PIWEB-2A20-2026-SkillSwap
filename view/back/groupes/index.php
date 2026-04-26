@@ -21,10 +21,38 @@ $groupes = $gc->listGroupes();
         .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
         .admin-table th, .admin-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         .admin-table th { background: #6a11cb; color: white; }
-        .btn-edit { background: #2575fc; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; }
-        .btn-delete { background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; margin-left: 5px; }
+        .btn-edit { background: #2575fc; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; display: inline-block; }
+        .btn-delete { background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; border: none; font-size: 12px; cursor: pointer; }
         .btn-add { background: #10b981; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
         .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        
+        /* MODALE */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 { margin-bottom: 15px; color: #333; }
+        .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        .btn-confirm { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+        .btn-confirm:hover { background: #cc0000; }
+        .btn-cancel { background: #ccc; color: #333; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+        .btn-cancel:hover { background: #aaa; }
     </style>
 </head>
 <body>
@@ -62,7 +90,7 @@ $groupes = $gc->listGroupes();
                     <td><?= $groupe['datecreation'] ?></td>
                     <td>
                         <a href="edit.php?id=<?= $groupe['idgroup'] ?>" class="btn-edit">Modifier</a>
-                        <a href="delete.php?id=<?= $groupe['idgroup'] ?>" class="btn-delete" onclick="return confirm('Supprimer ?')">Supprimer</a>
+                        <button class="btn-delete" onclick="openDeleteModal(<?= $groupe['idgroup'] ?>, '<?= htmlspecialchars($groupe['nom']) ?>')">Supprimer</button>
                     </a>
                 </tr>
                 <?php endforeach; ?>
@@ -72,5 +100,48 @@ $groupes = $gc->listGroupes();
         </tbody>
     </table>
 </div>
+
+<!-- MODALE DE CONFIRMATION -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3>Confirmation de suppression</h3>
+        <p id="modalMessage">Voulez-vous vraiment supprimer ce groupe ?</p>
+        <div class="modal-actions">
+            <button class="btn-confirm" id="confirmDelete">Oui, supprimer</button>
+            <button class="btn-cancel" onclick="closeDeleteModal()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let deleteId = null;
+    let deleteUrl = '';
+
+    function openDeleteModal(id, nom) {
+        deleteId = id;
+        deleteUrl = 'delete.php?id=' + id;
+        document.getElementById('modalMessage').innerHTML = 'Voulez-vous vraiment supprimer le groupe <strong>"' + nom + '"</strong> ?';
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteId = null;
+    }
+
+    document.getElementById('confirmDelete').onclick = function() {
+        if (deleteId) {
+            window.location.href = deleteUrl;
+        }
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('deleteModal');
+        if (event.target === modal) {
+            closeDeleteModal();
+        }
+    }
+</script>
+
 </body>
 </html>

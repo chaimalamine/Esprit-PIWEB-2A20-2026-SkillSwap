@@ -57,9 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
-    <a href="../groupes/index.php">📁 Groupes</a>
-    <a href="index.php">📝 Posts</a>
-    <a href="../commentaires/index.php">💬 Commentaires</a>
+    <a href="../groupes/index.php"> Groupes</a>
+    <a href="index.php"> Posts</a>
+    <a href="../commentaires/index.php"> Commentaires</a>
 </div>
 
 <div class="main">

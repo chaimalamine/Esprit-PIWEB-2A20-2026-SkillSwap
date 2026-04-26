@@ -31,28 +31,18 @@ class groupeC
         }
     }
 
-    // ========== VALIDATION ==========
-    public function validate($data)
+    // ========== READ - Rechercher des groupes par nom ==========
+    public function searchGroupes($keyword)
     {
-        $errors = [];
-        
-        if (empty(trim($data['nom']))) {
-            $errors['nom'] = "Le nom du groupe est requis";
-        } elseif (strlen(trim($data['nom'])) < 3) {
-            $errors['nom'] = "Le nom doit contenir au moins 3 caractères";
-        } elseif (strlen(trim($data['nom'])) > 100) {
-            $errors['nom'] = "Le nom ne peut pas dépasser 100 caractères";
+        $db = config::getConnexion();
+        try {
+            $sql = "SELECT * FROM groupe WHERE nom LIKE :keyword ORDER BY datecreation DESC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':keyword' => '%' . $keyword . '%']);
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
+            die("Erreur: " . $e->getMessage());
         }
-        
-        if (empty(trim($data['description']))) {
-            $errors['description'] = "La description est requise";
-        } elseif (strlen(trim($data['description'])) < 10) {
-            $errors['description'] = "La description doit contenir au moins 10 caractères";
-        } elseif (strlen($data['description']) > 1000) {
-            $errors['description'] = "La description ne peut pas dépasser 1000 caractères";
-        }
-        
-        return $errors;
     }
 
     // ========== CREATE ==========

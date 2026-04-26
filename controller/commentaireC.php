@@ -45,22 +45,6 @@ class commentaireC
         }
     }
 
-    // ========== VALIDATION ==========
-    public function validate($data)
-    {
-        $errors = [];
-        
-        if (empty(trim($data['contenu']))) {
-            $errors['contenu'] = "Le commentaire est requis";
-        } elseif (strlen(trim($data['contenu'])) > 500) {
-            $errors['contenu'] = "Le commentaire ne peut pas dépasser 500 caractères";
-        } elseif (strlen(trim($data['contenu'])) < 2) {
-            $errors['contenu'] = "Le commentaire doit contenir au moins 2 caractères";
-        }
-        
-        return $errors;
-    }
-
     // ========== CREATE ==========
     public function createCommentaire($commentaire)
     {
