@@ -45,30 +45,6 @@ class postC
         }
     }
 
-    // ========== VALIDATION ==========
-    public function validate($data)
-    {
-        $errors = [];
-        
-        if (empty(trim($data['titre']))) {
-            $errors['titre'] = "Le titre est requis";
-        } elseif (strlen(trim($data['titre'])) < 3) {
-            $errors['titre'] = "Le titre doit contenir au moins 3 caractères";
-        } elseif (strlen(trim($data['titre'])) > 200) {
-            $errors['titre'] = "Le titre ne peut pas dépasser 200 caractères";
-        }
-        
-        if (empty(trim($data['contenu']))) {
-            $errors['contenu'] = "Le contenu est requis";
-        } elseif (strlen(trim($data['contenu'])) < 10) {
-            $errors['contenu'] = "Le contenu doit contenir au moins 10 caractères";
-        } elseif (strlen(trim($data['contenu'])) > 2000) {
-            $errors['contenu'] = "Le contenu ne peut pas dépasser 2000 caractères";
-        }
-        
-        return $errors;
-    }
-
     // ========== CREATE ==========
     public function createPost($post)
     {
