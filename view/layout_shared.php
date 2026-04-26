@@ -159,7 +159,7 @@
     </a>
     <div class="navbar-links">
         <a href="<?= $base ?>/index.php">Accueil</a>
-        <a href="<?= $base ?>/view/cours/liste_cours.php">Explorer</a>
+        <a href="<?= $base ?>/view/explorer.php">Explorer</a>
         <a href="<?= $base ?>/view/cours/ajout_cours.php">Proposer</a>
         <a href="<?= $base ?>/view/cours/liste_cours.php" class="btn-start">Commencer</a>
     </div>

@@ -212,7 +212,7 @@ footer span { color: #7b2ff7; }
     <p>Rejoins des centaines de membres qui apprennent et partagent ensemble.</p>
     <div class="hero-btns">
         <a href="/SkillSwap/view/cours/liste_cours.php"><button class="btn-hero-white" style="background:linear-gradient(135deg,#7b2ff7,#a855f7);color:white;box-shadow:0 4px 16px rgba(123,47,247,0.35)">Explorer les cours</button></a>
-        <a href="/SkillSwap/view/demande/liste_demande.php"><button class="btn-hero-outline" style="border-color:#e0d9f7;color:#7b2ff7;background:white">Soumettre une demande</button></a>
+        <a href="/SkillSwap/view/demande/ajout_demande.php"><button class="btn-hero-outline" style="border-color:#e0d9f7;color:#7b2ff7;background:white">Soumettre une demande</button></a>
     </div>
 </section>
 

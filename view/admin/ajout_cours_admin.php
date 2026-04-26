@@ -82,13 +82,13 @@ include __DIR__ . '/layout_admin.php';
     </div>
 
     <div class="info-panel">
-        <h3> Privilèges Admin</h3>
+        <h3>⚡ Privilèges Admin</h3>
         <p>En tant qu'administrateur, vous contrôlez entièrement la publication.</p>
         <ul>
-            <li> Publiez directement sans attente</li>
-            <li> Créez en brouillon si besoin</li>
-            <li> Les utilisateurs passent par validation</li>
-            <li> Seul l'admin peut changer le statut</li>
+            <li>✅ Publiez directement sans attente</li>
+            <li>⏳ Créez en brouillon si besoin</li>
+            <li>🔒 Les utilisateurs passent par validation</li>
+            <li>👁️ Seul l'admin peut changer le statut</li>
         </ul>
         <div class="info-notice">
             💡 Choisissez <strong>Publié</strong> pour que le cours soit visible immédiatement sur le site.
