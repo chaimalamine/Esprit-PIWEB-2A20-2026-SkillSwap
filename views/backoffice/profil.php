@@ -4,7 +4,11 @@ if(!isset($_SESSION['user_id'])) {
     header('Location: connexion.php');
     exit();
 }
+
+// --- DÉTECTER SI INCLUS DANS FRONTDESIGN ---
+$inclus_dans_frontdesign = defined('INCLUS_FRONT');
 ?>
+<?php if(!$inclus_dans_frontdesign): // Afficher la structure complète seulement si pas inclus ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -18,38 +22,7 @@ if(!isset($_SESSION['user_id'])) {
         .sidebar a:hover { background: rgba(255,255,255,0.2); }
         .main { flex: 1; padding: 20px; }
         .topbar { background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; }
-        .profile-wrapper { max-width: 850px; margin: 25px auto; }
-        .profile-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.06); }
-        .profile-header { display: flex; align-items: center; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid #f4f4f4; margin-bottom: 25px; }
-        .avatar { width: 75px; height: 75px; background: linear-gradient(135deg, #7b2ff7, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; }
-        .user-meta h2 { margin: 0 0 8px 0; color: #222; }
-        .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #cd7f32; color: white; }
-        .rep-score { color: #888; font-weight: 500; font-size: 14px; margin-top: 6px; }
-        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .info-box { background: #f8f9fb; padding: 15px; border-radius: 10px; }
-        .info-box label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
-        .info-box span { font-size: 15px; color: #111; }
-        .bio-box { background: #f8f9fb; padding: 15px; border-radius: 10px; margin-bottom: 25px; }
-        .bio-box label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
-        .bio-box p { margin: 0; color: #888; font-style: italic; }
-        .skills-area label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
-        .skill-tags { display: flex; flex-wrap: wrap; gap: 10px; }
-        .skill-tag { background: #eef2ff; color: #7b2ff7; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; }
-        .empty-skill { background: #eee; color: #999; }
-        .actions { display: flex; gap: 15px; margin-top: 35px; padding-top: 25px; border-top: 2px solid #f4f4f4; }
-        .btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
-        .btn-edit { background: linear-gradient(90deg, #7b2ff7, #a855f7); color: white; }
-        .btn-edit:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(123, 47, 247, 0.3); }
-        .btn-danger { background: #fee2e2; color: #b91c1c; }
-        .btn-danger:hover { background: #fecaca; }
-        .success-message { background: #d1fae5; color: #047857; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #047857; }
-   .skill-tag.debutant { background: #bbf7d0; color: #166534; }
-.skill-tag.intermediaire { background: #fef3c7; color: #92400e; }
-.skill-tag.expert { background: #fecaca; color: #991b1b; }
-.skill-tag small { font-size: 10px; opacity: 0.8; }
-   
-   
-   </style>
+</style>
 </head>
 <body>
     <div class="sidebar">
@@ -60,14 +33,39 @@ if(!isset($_SESSION['user_id'])) {
         <a href="#">Offres</a>
         <a href="#">Messages</a>
         <a href="profil.php" style="background: rgba(255,255,255,0.2);">Profil</a>
-        <a href="../../views/frontoffice/frontdessign.php" style="margin-top: 30px; background: rgba(255,255,255,0.1);">← Retour au site</a>
+        <a href="../frontoffice/frontdessign.php" style="margin-top: 30px; background: rgba(255,255,255,0.1);">← Retour au site</a>
     </div>
-
     <div class="main">
         <div class="topbar">
             <h3>Gestion du Profil</h3>
-            <a href="http://localhost/projetwebfinal/controllers/UserC.php?action=logout" style="background: #ef4444; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 14px;">Déconnexion</a>
+            <a href="http://localhost/projetwebfinal/controllers/logout.php" style="background: #ef4444; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 14px;">Déconnexion</a>
         </div>
+<?php endif; ?>
+
+        <!-- ========== CONTENU DU PROFIL (AFFICHÉ DANS LES DEUX CAS) ========== -->
+        <style>
+            .profile-wrapper { max-width: 850px; margin: 25px auto; }
+            .profile-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.06); }
+            .profile-header { display: flex; align-items: center; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid #f4f4f4; margin-bottom: 25px; }
+            .avatar { width: 75px; height: 75px; background: linear-gradient(135deg, #7b2ff7, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; }
+            .user-meta h2 { margin: 0 0 8px 0; color: #222; }
+            .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #cd7f32; color: white; }
+            .rep-score { color: #888; font-weight: 500; font-size: 14px; margin-top: 6px; }
+            .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+            .info-box { background: #f8f9fb; padding: 15px; border-radius: 10px; }
+            .info-box label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+            .info-box span { font-size: 15px; color: #111; }
+            .bio-box { background: #f8f9fb; padding: 15px; border-radius: 10px; margin-bottom: 25px; }
+            .bio-box label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+            .bio-box p { margin: 0; color: #888; font-style: italic; }
+            .actions { display: flex; gap: 15px; margin-top: 35px; padding-top: 25px; border-top: 2px solid #f4f4f4; }
+            .btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+            .btn-edit { background: linear-gradient(90deg, #7b2ff7, #a855f7); color: white; }
+            .btn-edit:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(123, 47, 247, 0.3); }
+            .btn-danger { background: #fee2e2; color: #b91c1c; }
+            .btn-danger:hover { background: #fecaca; }
+            .success-message { background: #d1fae5; color: #047857; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #047857; }
+        </style>
 
         <div class="profile-wrapper">
             <div class="profile-card">
@@ -91,20 +89,28 @@ if(!isset($_SESSION['user_id'])) {
                     </div>
                     <div class="info-box">
                         <label>Membre depuis</label>
-                        <span><?php echo $_SESSION['user_date_inscription'] ?? 'Aujourd\'hui'; ?></span>
+                        <span><?php echo $_SESSION['user_date_inscription'] ?? date('d/m/Y'); ?></span>
                     </div>
                 </div>
 
                 <div class="bio-box">
-    <label>Bio / Présentation</label>
-    <p><?php echo !empty($_SESSION['user_bio']) ? $_SESSION['user_bio'] : 'Aucune bio définie pour le moment.'; ?></p>
-</div>
+                    <label>Bio / Présentation</label>
+                    <p><?php echo !empty($_SESSION['user_bio']) ? $_SESSION['user_bio'] : 'Aucune bio définie pour le moment.'; ?></p>
+                </div>
+
                 <div class="actions">
-                    <a href="modifier_profil.php" class="btn btn-edit" style="text-decoration: none; display: inline-block;">✏️ Modifier le profil</a>
+                    <?php if($inclus_dans_frontdesign): ?>
+                        <a href="frontdesign.php?page=modifier" class="btn btn-edit" style="text-decoration: none; display: inline-block;">✏️ Modifier le profil</a>
+                    <?php else: ?>
+                        <a href="modifier_profil.php" class="btn btn-edit" style="text-decoration: none; display: inline-block;">✏️ Modifier le profil</a>
+                    <?php endif; ?>
                     <a href="http://localhost/projetwebfinal/controllers/UserC.php?action=deleteProfile" class="btn btn-danger" style="text-decoration: none; display: inline-block;" onclick="return confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')">🗑️ Supprimer le compte</a>
                 </div>
             </div>
         </div>
+
+<?php if(!$inclus_dans_frontdesign): // Fermer la structure complète ?>
     </div>
 </body>
 </html>
+<?php endif; ?>

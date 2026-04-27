@@ -1,25 +1,27 @@
 <?php
-class Config {
-    private static $pdo = null;
+if (!class_exists('Config')) {
+    class Config {
+        private static $pdo = null;
 
-    public static function getConnexion() {
-        if (!isset(self::$pdo)) {
-            try {
-                self::$pdo = new PDO(
-                    'mysql:host=localhost;dbname=skillswap',
-                    'root',
-                    '',
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-                    ]
-                );
-                self::$pdo->exec("set names utf8mb4");
-            } catch (Exception $e) {
-                die('Erreur: ' . $e->getMessage());
+        public static function getConnexion() {
+            if (!isset(self::$pdo)) {
+                try {
+                    self::$pdo = new PDO(
+                        'mysql:host=localhost;dbname=skillswap',
+                        'root',
+                        '',
+                        [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                        ]
+                    );
+                    self::$pdo->exec("set names utf8mb4");
+                } catch (Exception $e) {
+                    die('Erreur: ' . $e->getMessage());
+                }
             }
+            return self::$pdo;
         }
-        return self::$pdo;
     }
 }
 ?>

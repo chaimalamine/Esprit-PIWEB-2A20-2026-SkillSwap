@@ -1,4 +1,5 @@
 <?php
+
 class User {
     private $id_utilisateur;
     private $nom;
@@ -8,9 +9,15 @@ class User {
     private $competences;
     private $date_inscription;
     private $statut;
+    
     private $score_reputation;
     private $nombre_avis_recus;
     private $badge_confiance;
+    private $role;
+
+
+
+
 
     // Constructeur
    public function __construct($nom="", $prenom="", $email="", $mot_de_passe="") {
@@ -21,6 +28,9 @@ class User {
 }
 
     // Getters
+    public function getRole() {
+    return $this->role;
+}
     public function getId_utilisateur() {
         return $this->id_utilisateur;
     }
@@ -83,7 +93,9 @@ class User {
     public function setMot_de_passe($mot_de_passe) {
         $this->mot_de_passe = $mot_de_passe;
     }
-
+    public function setRole($role) {
+        $this->role = $role;
+    }
 
     public function setCompetences($competences) {
         $this->competences = $competences;

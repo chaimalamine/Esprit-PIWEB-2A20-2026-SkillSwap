@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - SkillSwap</title>
+    <title>Connexion - SkillSwap</title> 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; background: #f5f3ff; color: #333; }
@@ -81,82 +81,175 @@
     </div>
 
     <script>
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const emailMessage = document.getElementById('emailMessage');
-        const passwordMessage = document.getElementById('passwordMessage');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        let emailValid = false;
-        let passwordValid = false;
-        
-        function validateEmail() {
-            const email = emailInput.value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            
-            if (email === '') {
-                emailInput.classList.remove('valid', 'invalid');
-                emailMessage.textContent = '';
-                emailMessage.classList.remove('valid', 'invalid');
-                emailValid = false;
-            } else if (!emailRegex.test(email)) {
-                emailInput.classList.add('invalid');
-                emailInput.classList.remove('valid');
-                emailMessage.textContent = '❌ Format d\'email invalide';
-                emailMessage.classList.add('invalid');
-                emailMessage.classList.remove('valid');
-                emailValid = false;
-            } else {
-                emailInput.classList.add('valid');
-                emailInput.classList.remove('invalid');
-                emailMessage.textContent = '✅ Email valide';
-                emailMessage.classList.add('valid');
-                emailMessage.classList.remove('invalid');
-                emailValid = true;
-            }
-            updateSubmitButton();
-        }
-        
-        function validatePassword() {
-            const password = passwordInput.value;
-            
-            if (password === '') {
-                passwordInput.classList.remove('valid', 'invalid');
-                passwordMessage.textContent = '';
-                passwordMessage.classList.remove('valid', 'invalid');
-                passwordValid = false;
-            } else {
-                passwordInput.classList.add('valid');
-                passwordInput.classList.remove('invalid');
-                passwordMessage.textContent = '✅ Mot de passe saisi';
-                passwordMessage.classList.add('valid');
-                passwordMessage.classList.remove('invalid');
-                passwordValid = true;
-            }
-            updateSubmitButton();
-        }
-        
-        function updateSubmitButton() {
-            if (emailValid && passwordValid) {
-                submitBtn.disabled = false;
-                submitBtn.classList.add('enabled');
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.classList.remove('enabled');
-            }
-        }
-        
-        emailInput.addEventListener('input', validateEmail);
-        passwordInput.addEventListener('input', validatePassword);
-        
-        window.addEventListener('load', function() {
-            if (emailInput.value.trim() !== '') {
-                validateEmail();
-            }
-            if (passwordInput.value !== '') {
-                validatePassword();
-            }
-        });
+        // ============================================================
+// ÉTAPE 1 : RÉCUPÉRER LES ÉLÉMENTS HTML PAR LEUR ID
+// Ces variables vont pointer vers les balises de la page
+// ============================================================
+
+// Récupérer le champ input de l'email (là où on écrit)
+const emailInput = document.getElementById('email');
+
+// Récupérer le champ input du mot de passe
+const passwordInput = document.getElementById('password');
+
+// Récupérer la <div> où on va afficher le message de validation de l'email
+const emailMessage = document.getElementById('emailMessage');
+
+// Récupérer la <div> où on va afficher le message de validation du mot de passe
+const passwordMessage = document.getElementById('passwordMessage');
+
+// Récupérer le bouton "Se connecter" (pour l'activer/désactiver)
+const submitBtn = document.getElementById('submitBtn');
+
+// ============================================================
+// ÉTAPE 2 : VARIABLES D'ÉTAT (vrai/faux)
+// Elles mémorisent si chaque champ est valide ou non
+// ============================================================
+
+// Au début, l'email n'est pas valide (champ vide)
+let emailValid = false;
+
+// Au début, le mot de passe n'est pas valide (champ vide)
+let passwordValid = false;
+
+// ============================================================
+// ÉTAPE 3 : FONCTION DE VALIDATION DE L'EMAIL
+// Appelée à chaque fois que l'utilisateur tape dans le champ email
+// ============================================================
+function validateEmail() {
+    // Récupérer la valeur du champ email et enlever les espaces au début/fin
+    const email = emailInput.value.trim();
+    
+    // Définir le format accepté pour un email (xxx@xxx.xxx)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // --- CAS 1 : Le champ est vide ---
+    if (email === '') {
+        // Enlever les classes de couleur (valid=vert, invalid=rouge)
+        emailInput.classList.remove('valid', 'invalid');
+        // Effacer le message de validation
+        emailMessage.textContent = '';
+        // Enlever les classes de couleur du message
+        emailMessage.classList.remove('valid', 'invalid');
+        // Marquer l'email comme NON valide
+        emailValid = false;
+    }
+    // --- CAS 2 : L'email ne correspond pas au format attendu ---
+    else if (!emailRegex.test(email)) {
+        // Ajouter la classe rouge sur le champ
+        emailInput.classList.add('invalid');
+        // Enlever la classe verte sur le champ
+        emailInput.classList.remove('valid');
+        // Afficher le message d'erreur en rouge
+        emailMessage.textContent = '❌ Format d\'email invalide';
+        // Ajouter la classe rouge sur le message
+        emailMessage.classList.add('invalid');
+        // Enlever la classe verte sur le message
+        emailMessage.classList.remove('valid');
+        // Marquer l'email comme NON valide
+        emailValid = false;
+    }
+    // --- CAS 3 : L'email est correct ---
+    else {
+        // Ajouter la classe verte sur le champ
+        emailInput.classList.add('valid');
+        // Enlever la classe rouge sur le champ
+        emailInput.classList.remove('invalid');
+        // Afficher le message de succès en vert
+        emailMessage.textContent = '✅ Email valide';
+        // Ajouter la classe verte sur le message
+        emailMessage.classList.add('valid');
+        // Enlever la classe rouge sur le message
+        emailMessage.classList.remove('invalid');
+        // Marquer l'email comme valide
+        emailValid = true;
+    }
+    // Appeler la fonction qui active/désactive le bouton
+    updateSubmitButton();
+}
+
+// ============================================================
+// ÉTAPE 4 : FONCTION DE VALIDATION DU MOT DE PASSE
+// Appelée à chaque fois que l'utilisateur tape dans le champ mot de passe
+// ============================================================
+function validatePassword() {
+    // Récupérer la valeur du champ mot de passe
+    const password = passwordInput.value;
+    
+    // --- CAS 1 : Le champ est vide ---
+    if (password === '') {
+        // Enlever les classes de couleur
+        passwordInput.classList.remove('valid', 'invalid');
+        // Effacer le message
+        passwordMessage.textContent = '';
+        // Enlever les classes de couleur du message
+        passwordMessage.classList.remove('valid', 'invalid');
+        // Marquer comme NON valide
+        passwordValid = false;
+    }
+    // --- CAS 2 : Le champ est rempli (n'importe quel contenu) ---
+    else {
+        // Ajouter la classe verte sur le champ
+        passwordInput.classList.add('valid');
+        // Enlever la classe rouge sur le champ
+        passwordInput.classList.remove('invalid');
+        // Afficher le message de succès
+        passwordMessage.textContent = '✅ Mot de passe saisi';
+        // Ajouter la classe verte sur le message
+        passwordMessage.classList.add('valid');
+        // Enlever la classe rouge sur le message
+        passwordMessage.classList.remove('invalid');
+        // Marquer comme valide
+        passwordValid = true;
+    }
+    // Appeler la fonction qui active/désactive le bouton
+    updateSubmitButton();
+}
+
+// ============================================================
+// ÉTAPE 5 : FONCTION QUI ACTIVE/DÉSACTIVE LE BOUTON
+// Si TOUS les champs sont valides → bouton activé
+// Sinon → bouton désactivé (grisé)
+// ============================================================
+function updateSubmitButton() {
+    // Si l'email EST valide ET le mot de passe EST valide
+    if (emailValid && passwordValid) {
+        // Activer le bouton (on peut cliquer dessus)
+        submitBtn.disabled = false;
+        // Ajouter la classe CSS qui rend le bouton violet
+        submitBtn.classList.add('enabled');
+    } else {
+        // Désactiver le bouton (on ne peut pas cliquer)
+        submitBtn.disabled = true;
+        // Enlever la classe CSS, le bouton redevient gris
+        submitBtn.classList.remove('enabled');
+    }
+}
+
+// ============================================================
+// ÉTAPE 6 : CONNECTER LES FONCTIONS AUX ÉVÉNEMENTS
+// ============================================================
+
+// Quand l'utilisateur tape dans le champ email → appeler validateEmail()
+emailInput.addEventListener('input', validateEmail);
+
+// Quand l'utilisateur tape dans le champ mot de passe → appeler validatePassword()
+passwordInput.addEventListener('input', validatePassword);
+
+// ============================================================
+// ÉTAPE 7 : VALIDATION AU CHARGEMENT DE LA PAGE
+// Si des valeurs sont déjà remplies (ex: après une erreur), les valider
+// ============================================================
+window.addEventListener('load', function() {
+    // Si le champ email n'est pas vide
+    if (emailInput.value.trim() !== '') {
+        validateEmail();    // Valider l'email
+    }
+    // Si le champ mot de passe n'est pas vide
+    if (passwordInput.value !== '') {
+        validatePassword(); // Valider le mot de passe
+    }
+});
     </script>
 </body>
 </html>

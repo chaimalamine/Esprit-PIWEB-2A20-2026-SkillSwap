@@ -1,7 +1,7 @@
 <?php 
 session_start();
-if(!isset($_SESSION['user_id'])) {
-    header('Location: connexion.php');
+if(!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
+    header('Location: ../frontoffice/frontdessign.php');
     exit();
 }
 ?>
@@ -16,11 +16,7 @@ if(!isset($_SESSION['user_id'])) {
     .sidebar h2 { text-align: center; }
     .sidebar a { display: block; color: white; text-decoration: none; margin: 15px 0; padding: 10px; border-radius: 5px; }
     .sidebar a:hover { background: rgba(255,255,255,0.2); }
-   .main { 
-    margin-left: 250px;  /* ← 220px + 30px d'espace */
-    padding: 20px; 
-    flex: 1; 
-}
+    .main { margin-left: 250px; padding: 20px; flex: 1; }
     .topbar { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
     .card { background: linear-gradient(135deg, #ff9a9e, #fad0c4); padding: 20px; border-radius: 15px; color: #333; font-weight: bold; }
