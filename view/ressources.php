@@ -9,7 +9,6 @@ $controller = new RessourceController();
 $errors = [];
 $success = '';
 
-// GESTION DE L'AJOUT (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_ressource'])) {
     
     $nom = trim($_POST['nom'] ?? '');
@@ -20,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_ressource'])) {
     $etat = trim($_POST['etat'] ?? '');
     $date_achat = $_POST['date_achat'] ?? null;
     $statut = trim($_POST['statut'] ?? 'Disponible');
-    $id_proprietaire = 1; // À remplacer par $_SESSION['user_id']
+    $id_proprietaire = 1; 
 
     
     if (empty($nom)) $errors[] = "Le nom est obligatoire.";
@@ -229,20 +228,20 @@ $types = $controller->getTypesRessources();
     <?php if (isset($_GET['msg'])): ?>
         <div class="success-msg">
             <?php
-            if ($_GET['msg'] === 'created') echo "✅ Ressource ajoutée avec succès !";
-            elseif ($_GET['msg'] === 'deleted') echo "🗑️ Ressource supprimée avec succès !";
+            if ($_GET['msg'] === 'created') echo " Ressource ajoutée avec succès !";
+            elseif ($_GET['msg'] === 'deleted') echo " Ressource supprimée avec succès !";
             ?>
         </div>
     <?php endif; ?>
 
     <!-- FORMULAIRE D'AJOUT -->
     <div class="card">
-        <h2 style="margin-top:0; color:#7b2ff7;">➕ Ajouter une ressource</h2>
+        <h2 style="margin-top:0; color:#7b2ff7;"> Ajouter une ressource</h2>
         <form method="POST">
             <div class="form-grid">
                 <div class="form-group">
                     <label>Nom de la ressource *</label>
-                    <input type="text" name="nom" placeholder="Ex: Projecteur, Salle A..." required>
+                    <input type="text" name="nom" placeholder="Ex: Projecteur, Salle A..." >
                 </div>
                 <div class="form-group">
                     <label>Type</label>
@@ -257,11 +256,11 @@ $types = $controller->getTypesRessources();
                 </div>
                 <div class="form-group">
                     <label>Quantité disponible *</label>
-                    <input type="number" name="quantite_disponible" min="0" value="0" required>
+                    <input type="number" name="quantite_disponible" min="0" value="0" >
                 </div>
                 <div class="form-group">
                     <label>Quantité totale *</label>
-                    <input type="number" name="quantite_totale" min="0" value="0" required>
+                    <input type="number" name="quantite_totale" min="0" value="0" >
                 </div>
                 <div class="form-group">
                     <label>État</label>

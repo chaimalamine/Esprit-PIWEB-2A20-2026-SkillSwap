@@ -32,9 +32,7 @@
             <th>Action</th> 
         </tr>
         <?php 
-        // transforme les données brutes venant de la base de données 
-        // (via $events) en lignes HTML lisibles dans un tableau, avec pour chaque événement ses informations
-        //  et un bouton de suppression sécurisé, ou affiche un message d'absence si la liste est vide.
+     
 
         if (!empty($events)) {
             foreach ($events as $e) {

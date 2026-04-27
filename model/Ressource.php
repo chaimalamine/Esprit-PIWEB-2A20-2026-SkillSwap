@@ -12,7 +12,7 @@ class Ressource {
     private $statut;
     private $date_creation;
 
-    public function __construct( //constructeur
+    public function __construct( 
         $nom = '', 
         $type = '', 
         $description = '', 
