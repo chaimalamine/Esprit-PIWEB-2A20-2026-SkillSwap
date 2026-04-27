@@ -44,8 +44,8 @@ MVC Pattern (Model-View-Controller)
 | Eyette chouikha | Users & Skills |
 | Seifeddine Lahbib | Offers & Requests |
 | Yasmin Cherif | groups & group members |
-| Chaima Lamine | events & registration |
-|  Malek Wertani | Reputation & recommendation |
+| Chaima Lamine | events & ressources |
+|  Malek Wertani | parainage |
 
 ## Academic Context
 Developed at **Esprit School of Engineering – Tunisia**
