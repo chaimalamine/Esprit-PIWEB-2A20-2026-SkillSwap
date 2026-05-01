@@ -1,4 +1,3 @@
-
 <?php
 require_once 'config.php';
 require_once 'model/Event.php';
@@ -10,6 +9,21 @@ session_start();
 $eventController = new EventController();
 $ressourceController = new RessourceController();
 
+// --- ACTION AJAX POUR RÉCUPÉRER LES AVIS ---
+if (isset($_GET['action']) && $_GET['action'] === 'get_reviews' && isset($_GET['id'])) {
+    header('Content-Type: application/json');
+    $id = intval($_GET['id']);
+    try {
+        $db = config::getConnexion();
+        $stmt = $db->prepare('SELECT note, commentaire, date_feedback FROM feedback_ressource WHERE id_ressource = :res ORDER BY date_feedback DESC');
+        $stmt->execute([':res' => $id]);
+        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Exception $e) {
+        echo json_encode([]);
+    }
+    exit();
+}
+
 // INITIALISATION
 $errors = []; $fieldErrors = []; $success = '';
 $editModeEvent = false; $editEvent = null;
@@ -19,9 +33,9 @@ $searchEvent = $_GET['search'] ?? ''; $sortEvent = $_GET['sort'] ?? '';
 $searchRessource = $_GET['search_ressource'] ?? ''; $typeFilter = $_GET['type_ressource'] ?? '';
 $sortRessource = $_GET['sort_ressource'] ?? '';
 
-// --- NOUVEAU : TRAITEMENT DU FEEDBACK ---
+// --- TRAITEMENT DU FEEDBACK (Version Robuste) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
-    $idRessource = $_POST['id_ressource'] ?? 0;
+    $idRessource = intval($_POST['id_ressource'] ?? 0);
     $note = intval($_POST['note'] ?? 0);
     $commentaire = trim($_POST['commentaire'] ?? '');
 
@@ -29,22 +43,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
         try {
             $db = config::getConnexion();
             
-            // 1. Insérer l'avis
-            $req = $db->prepare('INSERT INTO feedback_ressource (id_ressource, note, commentaire) VALUES (:res, :note, :com)');
+            // On insère avec id_evenement = NULL car on note depuis la liste globale
+            $req = $db->prepare('INSERT INTO feedback_ressource (id_evenement, id_ressource, note, commentaire) VALUES (NULL, :res, :note, :com)');
             $req->execute([':res' => $idRessource, ':note' => $note, ':com' => $commentaire]);
 
-            // 2. Recalculer la moyenne
+            // Recalculer la moyenne
             $stmt = $db->prepare('SELECT AVG(note) as moy, COUNT(*) as cnt FROM feedback_ressource WHERE id_ressource = :res');
             $stmt->execute([':res' => $idRessource]);
-            $result = $stmt->fetch();
+            $data = $stmt->fetch();
 
-            // 3. Mettre à jour la table ressource
+            $nouvelleMoyenne = $data['moy'] ? round($data['moy'], 2) : 0;
+            $nouveauCount = $data['cnt'] ? $data['cnt'] : 0;
+
+            // Mettre à jour la ressource
             $update = $db->prepare('UPDATE ressource SET note_moyenne = :moy, nombre_avis = :cnt WHERE id_ressource = :res');
-            $update->execute([':moy' => $result['moy'], ':cnt' => $result['cnt'], ':res' => $idRessource]);
+            $update->execute([':moy' => $nouvelleMoyenne, ':cnt' => $nouveauCount, ':res' => $idRessource]);
 
-            $success = "⭐ Merci pour votre avis !";
+            $success = "⭐ Avis envoyé avec succès !";
+            
         } catch (Exception $e) {
-            $errors[] = "Erreur lors de l'envoi de l'avis.";
+            $errors[] = "Erreur : " . $e->getMessage();
         }
     } else {
         $errors[] = "Note invalide.";
@@ -434,7 +452,7 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                         <th>Qté</th>
                         <th>État</th>
                         <th>Statut</th>
-                        <th>Réputation</th> <!-- Nouvelle Colonne -->
+                        <th>Réputation</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -463,6 +481,7 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                         <a href="#" class="btn-edit" onclick="openEditModal('?tab=ressources&action=edit_ressource&id=<?= $r['id_ressource'] ?>');return false;">✏️</a>
                         <a href="#" class="btn-delete" onclick="openDeleteModal('?tab=ressources&action=delete_ressource&id=<?= $r['id_ressource'] ?>','ressource');return false;">🗑️</a>
                         <button class="btn-feedback" onclick="openFeedbackModal(<?= $r['id_ressource'] ?>, '<?= addslashes($r['nom']) ?>')">📝 Noter</button>
+                        <button class="btn-jointure" style="background:#17a2b8;" onclick="openReviewsModal(<?= $r['id_ressource'] ?>, '<?= addslashes($r['nom']) ?>')">👁️ Avis</button>
                     </td>
                 </tr>
                 <?php endforeach; else: ?><tr><td colspan="7" style="text-align:center;color:#888;padding:30px;">Aucune ressource</td></tr><?php endif; ?>
@@ -554,6 +573,21 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                 <button type="submit" class="modal-btn confirm">Envoyer l'avis</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL DES AVIS (NOUVEAU) -->
+<div class="modal-overlay" id="reviewsModal">
+    <div class="modal" style="max-width: 600px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h4 style="margin:0;">💬 Avis sur : <span id="reviewResourceName" style="color:#7b2ff7;"></span></h4>
+            <button onclick="closeModal('reviewsModal')" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div id="reviewsList" style="max-height: 400px; overflow-y: auto;">
+            <!-- Les avis seront injectés ici par JS -->
+            <p style="text-align:center; color:#888;">Chargement...</p>
+        </div>
     </div>
 </div>
 
@@ -664,6 +698,49 @@ function openFeedbackModal(id, nom) {
     document.getElementById('feedbackModal').classList.add('active');
 }
 
+// Gestion Modal Reviews (Avis)
+function openReviewsModal(id, nom) {
+    document.getElementById('reviewResourceName').textContent = nom;
+    document.getElementById('reviewsList').innerHTML = '<p style="text-align:center;">Chargement...</p>';
+    document.getElementById('reviewsModal').classList.add('active');
+
+    // Appel AJAX pour récupérer les avis
+    fetch(`dashboard.php?action=get_reviews&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('reviewsList');
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">Aucun avis pour le moment. Soyez le premier !</p>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(avis => {
+                // Génération des étoiles
+                let etoiles = '';
+                for(let i=1; i<=5; i++) {
+                    etoiles += (i <= avis.note) ? '⭐' : '☆';
+                }
+                
+                // Formatage de la date
+                const date = new Date(avis.date_feedback).toLocaleDateString('fr-FR');
+
+                html += `
+                <div style="border-bottom:1px solid #eee; padding:15px 0;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <strong>${etoiles}</strong>
+                        <small style="color:#888;">${date}</small>
+                    </div>
+                    <p style="margin:0; color:#555;">${avis.commentaire ? avis.commentaire : 'Pas de commentaire.'}</p>
+                </div>`;
+            });
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('reviewsList').innerHTML = '<p style="color:red;">Erreur de chargement.</p>';
+        });
+}
+
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
@@ -688,4 +765,3 @@ document.addEventListener('DOMContentLoaded', toggleLieuInput);
 </script>
 </body>
 </html>
-```
