@@ -272,6 +272,8 @@ $events = $eventController->listeEvents();
                     let icon = '📦';
                     if(res.type === 'Salle') icon = '🏫';
                     if(res.type === 'Matériel') icon = '💻';
+                    if(res.type === 'Consommable') icon = '🔋';
+                    if(res.type === 'Autre') icon = '🖊️';
                     
                     const item = document.createElement('div');
                     item.className = 'resource-item';

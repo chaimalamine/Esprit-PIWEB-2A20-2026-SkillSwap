@@ -122,15 +122,6 @@ class EventController {
         } catch (Exception $e) { die('Erreur listerEvenements: ' . $e->getMessage()); }
     }
 
-  /*  public function searchRessources() {
-        $evenements = $this->listerEvenements();
-        $selectedId = $_POST['id_evenement'] ?? null;
-        $ressources = [];
-        if ($selectedId && is_numeric($selectedId)) {
-            $ressources = $this->afficherRessourcesParEvenement($selectedId);
-        }
-        
-    }*/
 
     public function searchRessourcesFront() {
         $evenements = $this->listerEvenementsPublics();
@@ -139,7 +130,7 @@ class EventController {
         if ($selectedId && is_numeric($selectedId)) {
             $ressources = $this->afficherRessourcesParEvenement($selectedId);
         }
-        //require_once __DIR__ . '/../view/searchRessourcesFront.php';
+       
     }
 
     public function listerEvenementsPublics() {
@@ -216,5 +207,26 @@ class EventController {
         
        
     }
+    public function ajouterFeedback($idEvent, $idRessource, $note, $commentaire) {
+    $db = config::getConnexion();
+    try {
+        // 1. Insérer l'avis
+        $req = $db->prepare('INSERT INTO feedback_ressource (id_evenement, id_ressource, note, commentaire) VALUES (:evt, :res, :note, :com)');
+        $req->execute([':evt' => $idEvent, ':res' => $idRessource, ':note' => $note, ':com' => $commentaire]);
+
+        // 2. Recalculer la moyenne pour cette ressource
+        $stmt = $db->prepare('SELECT AVG(note) as moy, COUNT(*) as cnt FROM feedback_ressource WHERE id_ressource = :res');
+        $stmt->execute([':res' => $idRessource]);
+        $result = $stmt->fetch();
+
+        // 3. Mettre à jour la table ressource
+        $update = $db->prepare('UPDATE ressource SET note_moyenne = :moy, nombre_avis = :cnt WHERE id_ressource = :res');
+        $update->execute([':moy' => $result['moy'], ':cnt' => $result['cnt'], ':res' => $idRessource]);
+
+        return true;
+    } catch (Exception $e) {
+        die('Erreur feedback: ' . $e->getMessage());
+    }
+}
 }
 ?>

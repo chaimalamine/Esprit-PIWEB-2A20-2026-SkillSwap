@@ -1,3 +1,4 @@
+
 <?php
 require_once 'config.php';
 require_once 'model/Event.php';
@@ -18,6 +19,38 @@ $searchEvent = $_GET['search'] ?? ''; $sortEvent = $_GET['sort'] ?? '';
 $searchRessource = $_GET['search_ressource'] ?? ''; $typeFilter = $_GET['type_ressource'] ?? '';
 $sortRessource = $_GET['sort_ressource'] ?? '';
 
+// --- NOUVEAU : TRAITEMENT DU FEEDBACK ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
+    $idRessource = $_POST['id_ressource'] ?? 0;
+    $note = intval($_POST['note'] ?? 0);
+    $commentaire = trim($_POST['commentaire'] ?? '');
+
+    if ($idRessource > 0 && $note >= 1 && $note <= 5) {
+        try {
+            $db = config::getConnexion();
+            
+            // 1. Insérer l'avis
+            $req = $db->prepare('INSERT INTO feedback_ressource (id_ressource, note, commentaire) VALUES (:res, :note, :com)');
+            $req->execute([':res' => $idRessource, ':note' => $note, ':com' => $commentaire]);
+
+            // 2. Recalculer la moyenne
+            $stmt = $db->prepare('SELECT AVG(note) as moy, COUNT(*) as cnt FROM feedback_ressource WHERE id_ressource = :res');
+            $stmt->execute([':res' => $idRessource]);
+            $result = $stmt->fetch();
+
+            // 3. Mettre à jour la table ressource
+            $update = $db->prepare('UPDATE ressource SET note_moyenne = :moy, nombre_avis = :cnt WHERE id_ressource = :res');
+            $update->execute([':moy' => $result['moy'], ':cnt' => $result['cnt'], ':res' => $idRessource]);
+
+            $success = "⭐ Merci pour votre avis !";
+        } catch (Exception $e) {
+            $errors[] = "Erreur lors de l'envoi de l'avis.";
+        }
+    } else {
+        $errors[] = "Note invalide.";
+    }
+}
+
 // ÉDITION
 if (isset($_GET['action']) && $_GET['action'] === 'edit_event' && isset($_GET['id'])) {
     $editEvent = $eventController->getEvent($_GET['id']);
@@ -34,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_event'])) {
     $description = trim($_POST['description'] ?? '');
     
     // Gest specifique du Lieu (Select + Input Autre)
-
     $lieu_select = $_POST['lieu_select'] ?? '';
     $lieu_autre = trim($_POST['lieu_autre'] ?? '');
     $lieu = ($lieu_select === 'autre') ? $lieu_autre : $lieu_select;
@@ -229,7 +261,8 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
 .btn-delete{background:#ff4b4b;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;text-decoration:none;font-size:12px;font-weight:500;}
 .btn-edit{background:#ffc107;color:#333;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;text-decoration:none;font-size:12px;font-weight:500;margin-right:6px;}
 .btn-jointure{background:#28a745;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;text-decoration:none;font-size:12px;font-weight:500;margin-right:6px;}
-.btn-delete:hover{background:#e03e3e;}.btn-edit:hover{background:#e0a800;}.btn-jointure:hover{background:#218838;}
+.btn-feedback{background:#f39c12;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;text-decoration:none;font-size:12px;font-weight:500;margin-left:5px;}
+.btn-delete:hover{background:#e03e3e;}.btn-edit:hover{background:#e0a800;}.btn-jointure:hover{background:#218838;}.btn-feedback:hover{background:#d35400;}
 .badge{padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500;}.badge-success{background:#d4edda;color:#155724;}.badge-warning{background:#fff3cd;color:#856404;}.badge-danger{background:#f8d7da;color:#721c24;}
 .error{color:#721c24;background:#f8d7da;padding:12px;border-radius:8px;margin-bottom:20px;}
 .success-msg{color:#155724;background:#d4edda;padding:12px;border-radius:8px;margin-bottom:20px;}
@@ -309,7 +342,7 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
 
                 <div class="form-group"><label>Description *</label><textarea name="description" rows="3" class="<?=inputClass('description')?>"><?=htmlspecialchars($_POST['description']??($editEvent['description']??''))?></textarea><?=showFieldError('description')?></div>
                 
-                <!-- MODIFICATION DATES : Type datetime-local -->
+                
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Date début *</label>
@@ -393,11 +426,53 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
         <div class="card">
             <h3 style="margin-top:0;color:#7b2ff7;">📋 Mes Ressources</h3>
             <form method="GET" class="search-sort"><input type="hidden" name="tab" value="ressources"><input type="text" name="search_ressource" placeholder="Rechercher..." value="<?=htmlspecialchars($searchRessource)?>"><select name="type_ressource"><option value="">Tous types</option><?php foreach($typesRessources as $t): ?><option value="<?=htmlspecialchars($t)?>" <?= $typeFilter===$t?'selected':'' ?>><?=htmlspecialchars($t)?></option><?php endforeach; ?></select><select name="sort_ressource"><option value="">Trier par...</option><option value="nom" <?= $sortRessource==='nom'?'selected':'' ?>>Nom</option><option value="type" <?= $sortRessource==='type'?'selected':'' ?>>Type</option><option value="quantite_disponible" <?= $sortRessource==='quantite_disponible'?'selected':'' ?>>Quantité</option></select><button type="submit">🔍</button><?php if(!empty($searchRessource)||!empty($typeFilter)||!empty($sortRessource)):?><a href="?tab=ressources" class="reset">✕</a><?php endif; ?></form>
-            <table><thead><tr><th>Nom</th><th>Type</th><th>Qté</th><th>État</th><th>Statut</th><th>Actions</th></tr></thead><tbody><?php if(!empty($ressources)): foreach($ressources as $r): $badge=$r['statut']==='Disponible'?'badge-success':($r['statut']==='Réservé'?'badge-warning':'badge-danger'); ?><tr><td><strong><?=htmlspecialchars($r['nom'])?></strong></td><td><?=htmlspecialchars($r['type']??'-')?></td><td><?= (int)$r['quantite_disponible'] ?>/<?= (int)$r['quantite_totale'] ?></td><td><?=htmlspecialchars($r['etat']??'-')?></td><td><span class="badge <?= $badge ?>"><?=htmlspecialchars($r['statut'])?></span></td><td><a href="#" class="btn-edit" onclick="openEditModal('?tab=ressources&action=edit_ressource&id=<?= $r['id_ressource'] ?>');return false;">✏️</a><a href="#" class="btn-delete" onclick="openDeleteModal('?tab=ressources&action=delete_ressource&id=<?= $r['id_ressource'] ?>','ressource');return false;">🗑️</a></td></tr><?php endforeach; else: ?><tr><td colspan="6" style="text-align:center;color:#888;padding:30px;">Aucune ressource</td></tr><?php endif; ?></tbody></table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Qté</th>
+                        <th>État</th>
+                        <th>Statut</th>
+                        <th>Réputation</th> <!-- Nouvelle Colonne -->
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php if(!empty($ressources)): foreach($ressources as $r): 
+                    $badge=$r['statut']==='Disponible'?'badge-success':($r['statut']==='Réservé'?'badge-warning':'badge-danger'); 
+                    
+                    // Calcul des étoiles
+                    $note = round($r['note_moyenne'] ?? 0, 1);
+                    $etoiles = "";
+                    for($i=1; $i<=5; $i++) {
+                        $etoiles .= ($i <= $note) ? "⭐" : "☆";
+                    }
+                ?> 
+                <tr>
+                    <td><strong><?=htmlspecialchars($r['nom'])?></strong></td>
+                    <td><?=htmlspecialchars($r['type']??'-')?></td>
+                    <td><?= (int)$r['quantite_disponible'] ?>/<?= (int)$r['quantite_totale'] ?></td>
+                    <td><?=htmlspecialchars($r['etat']??'-')?></td>
+                    <td><span class="badge <?= $badge ?>"><?=htmlspecialchars($r['statut'])?></span></td>
+                    <td>
+                        <span style="color:#f39c12; font-size:14px;" title="Note moyenne: <?= $note ?>/5"><?= $etoiles ?></span>
+                        <small style="color:#888;">(<?= $r['nombre_avis'] ?? 0 ?>)</small>
+                    </td>
+                    <td>
+                        <a href="#" class="btn-edit" onclick="openEditModal('?tab=ressources&action=edit_ressource&id=<?= $r['id_ressource'] ?>');return false;">✏️</a>
+                        <a href="#" class="btn-delete" onclick="openDeleteModal('?tab=ressources&action=delete_ressource&id=<?= $r['id_ressource'] ?>','ressource');return false;">🗑️</a>
+                        <button class="btn-feedback" onclick="openFeedbackModal(<?= $r['id_ressource'] ?>, '<?= addslashes($r['nom']) ?>')">📝 Noter</button>
+                    </td>
+                </tr>
+                <?php endforeach; else: ?><tr><td colspan="7" style="text-align:center;color:#888;padding:30px;">Aucune ressource</td></tr><?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
+<!-- MODALS -->
 <div class="modal-overlay" id="deleteModal"><div class="modal"><h4>⚠️ Supprimer ?</h4><p id="modalMessage"></p><div class="modal-buttons"><button class="modal-btn cancel" onclick="closeDeleteModal()">Annuler</button><a href="#" class="modal-btn confirm" id="confirmDeleteBtn" style="background:#ff4b4b;color:white;">Supprimer</a></div></div></div>
 <div class="modal-overlay" id="editModal"><div class="modal"><h4>✏️ Modifier</h4><p>Vos changements seront enregistrés.</p><div class="modal-buttons"><button class="modal-btn cancel" onclick="closeEditModal()">Annuler</button><a href="#" class="modal-btn confirm" id="confirmEditBtn">Continuer</a></div></div></div>
 
@@ -450,6 +525,38 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
     </div>
 </div>
 
+<!-- MODAL DE FEEDBACK (NOUVEAU) -->
+<div class="modal-overlay" id="feedbackModal">
+    <div class="modal" style="max-width: 500px;">
+        <h4>📝 Noter cette ressource</h4>
+        <p id="feedbackResourceName" style="font-weight:bold; color:#7b2ff7; margin-bottom: 20px;"></p>
+        
+        <form method="POST">
+            <input type="hidden" name="action_feedback" value="1">
+            <input type="hidden" name="id_ressource" id="fbIdRessource">
+            
+            <div class="form-group">
+                <label>Note :</label>
+                <select name="note" required style="font-size: 20px; padding: 5px;">
+                    <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                    <option value="4">⭐⭐⭐⭐ (Très bien)</option>
+                    <option value="3">⭐⭐⭐ (Correct)</option>
+                    <option value="2">⭐⭐ (Moyen)</option>
+                    <option value="1">⭐ (Mauvais état)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Commentaire (optionnel) :</label>
+                <textarea name="commentaire" rows="3" placeholder="Ex: Fonctionnait parfaitement, merci !"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="modal-btn cancel" onclick="closeModal('feedbackModal')">Annuler</button>
+                <button type="submit" class="modal-btn confirm">Envoyer l'avis</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 // Données préchargées depuis PHP (associations)
 const assocData = <?= json_encode($allAssociations ?? []) ?>;
@@ -481,7 +588,7 @@ function closeAssocModal() {
     currentAssocEventId = null;
 }
 
-//la table des assoiciations en bas !!!!!
+//la table des assoiciations en bas 
 
 function renderAssocTable(eventId) {
     const tbody = document.getElementById('assocTableBody');
@@ -494,7 +601,7 @@ function renderAssocTable(eventId) {
     
     let html = '';
     data.forEach(r => {
-        // Choix de la couleur du badge selon le statut
+       
         const badge = r.statut_reservation === 'Confirmé' ? 'badge-success' : 
                       (r.statut_reservation === 'Refusé' ? 'badge-danger' : 'badge-warning');
         
@@ -510,7 +617,7 @@ function renderAssocTable(eventId) {
     tbody.innerHTML = html;
 }
 
-// Auto-open modal si redirection après association/dissociation
+
 <?php if($activeAssocEventId): 
     $eventTitre = '';
     foreach($events as $ev) { if($ev['id_evenement'] == $activeAssocEventId) { $eventTitre = $ev['titre']; break; } }
@@ -549,6 +656,18 @@ function openEditModal(url){
 function closeEditModal(){
     document.getElementById('editModal').classList.remove('active');
 }
+
+// Gestion Modal Feedback
+function openFeedbackModal(id, nom) {
+    document.getElementById('fbIdRessource').value = id;
+    document.getElementById('feedbackResourceName').textContent = "Ressource : " + nom;
+    document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m){m.classList.remove('active');} }));
 
 //lieu
@@ -569,3 +688,4 @@ document.addEventListener('DOMContentLoaded', toggleLieuInput);
 </script>
 </body>
 </html>
+```

@@ -9,7 +9,7 @@ class RessourceController {
 
    
 
-    // LISTE RESSOURCES avec recherche, filtre ET tri
+    // LISTE RESSOURCES avec recherche filtre tri
     public function listeRessources($search = '', $type = '', $sort = '') {
         $db = config::getConnexion();
         try {

@@ -11,7 +11,7 @@ class Event {
     private $id_organisateur;
     private $statut;
 
-    public function __construct($titre = '', $description = '', $date_debut = '', $date_fin = '', $lieu = '', $capacite_max = 0, $places_restantes = 0, $id_organisateur = 0, $statut = 'Actif') {
+    public function __construct ($titre = '', $description = '', $date_debut = '', $date_fin = '', $lieu = '', $capacite_max = 0, $places_restantes = 0, $id_organisateur = 0, $statut = 'Actif') {
         $this->titre = $titre;
         $this->description = $description;
         $this->date_debut = $date_debut;
