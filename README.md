@@ -4,30 +4,31 @@
 This project was developed as part of the PIWEB – 2rd Year Engineering Program at **Esprit School of Engineering** (Academic Year 2025–2026).
 SkillSwap allows users to exchange skills without money using a credit system.
 
-## Features
-- **User Management & Skill Profiling**
-  - Secure authentication with email verification.
-  - Detailed user profiles with skill levels (Beginner, Intermediate, Expert).
-  - Skill assessment tests and profile customization.
+**Utilisateurs
+Inscription et authentification sécurisée (email).
+Profils utilisateurs détaillés.
+Gestion des niveaux de compétences (Débutant, Intermédiaire, Expert).
+Personnalisation des profils.
 
-- **Exchange Marketplace**
-  - Publish and browse offers/requests categorized by domain (Tech, Design, Marketing...).
-  - Track exchanged hours and credit balance.
+**Groupes & communauté
+Création de groupes publics ou privés.
+Participation à des discussions.
+Gestion des rôles (membre, modérateur, administrateur).
 
-- **Community & Groups**
-  - Create public or private groups with custom rules.
-  - Join communities and participate in moderated discussions.
-  - Role-based access (Member, Moderator, Admin).
+**Offres & demandes
+Publication d’offres et de demandes de compétences.
+Catégorisation par domaines (Tech, Design, Marketing...).
+Gestion des échanges entre utilisateurs.
 
-- **Events & Workshops**
-  - Organize and consult workshops or events with capacity management.
-  - Secure registration system with confirmation notifications.
-  - Post-event feedback and rating system.
+**Parrainage
+Système de parrainage entre utilisateurs.
+Suivi des invitations et des récompenses.
 
-- **Reputation & Recommendations**
-  - Automated reputation scoring based on completed exchanges.
-  - Peer review system with abuse reporting.
-  - AI-driven recommendations based on history.
+**Événements & ressources
+Organisation d’événements et ateliers.
+Gestion de capacité et inscriptions.
+Notifications de confirmation.
+Évaluation et feedback après participation.
 
 ## Tech Stack
 ### Frontend
