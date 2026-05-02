@@ -53,6 +53,7 @@ $posts = $pc->listPosts();
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
+    <a href="../dashboard.php"> Groupes & Communauté</a>
     <a href="../groupes/index.php"> Groupes</a>
     <a href="index.php"> Posts</a>
     <a href="../commentaires/index.php"> Commentaires</a>
@@ -78,9 +79,9 @@ $posts = $pc->listPosts();
                 <tr>
                     <td><?= $post['idpost'] ?></td>
                     <td><?= htmlspecialchars($post['titre']) ?></td>
-                    <td><?= htmlspecialchars(substr($post['contenu'], 0, 50)) ?>...</td>
-                    <td><?= $post['idgroup'] ?></td>
-                    <td><?= $post['datepost'] ?></td>
+                    <td><?= htmlspecialchars(substr($post['contenu'], 0, 50)) ?>...<\/a>
+                    <td><?= $post['idgroup'] ?>\<a>
+                    <td><?= $post['datepost'] ?>\<a>
                     <td>
                         <a href="edit.php?id=<?= $post['idpost'] ?>" class="btn-edit">Modifier</a>
                         <button class="btn-delete" onclick="openDeleteModal(<?= $post['idpost'] ?>, '<?= htmlspecialchars($post['titre']) ?>')">Supprimer</button>
@@ -91,9 +92,10 @@ $posts = $pc->listPosts();
                 <tr><td colspan="6">Aucun post trouvé</a></td>
             <?php endif; ?>
         </tbody>
-    </table>
+    </td>
 </div>
 
+<!-- MODALE UNIQUE -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3>Confirmation de suppression</h3>
