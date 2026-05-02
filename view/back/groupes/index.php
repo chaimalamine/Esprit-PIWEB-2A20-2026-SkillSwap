@@ -26,7 +26,6 @@ $groupes = $gc->listGroupes();
         .btn-add { background: #10b981; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
         .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         
-        /* MODALE */
         .modal {
             display: none;
             position: fixed;
@@ -45,23 +44,20 @@ $groupes = $gc->listGroupes();
             border-radius: 15px;
             width: 400px;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-        .modal-content h3 { margin-bottom: 15px; color: #333; }
         .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
         .btn-confirm { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
-        .btn-confirm:hover { background: #cc0000; }
         .btn-cancel { background: #ccc; color: #333; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
-        .btn-cancel:hover { background: #aaa; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
-    <a href="index.php">📁 Groupes</a>
-    <a href="../posts/index.php">📝 Posts</a>
-    <a href="../commentaires/index.php">💬 Commentaires</a>
+    <a href="../dashboard.php"> Groupes & Communauté</a>
+    <a href="index.php"> Groupes</a>
+    <a href="../posts/index.php"> Posts</a>
+    <a href="../commentaires/index.php"> Commentaires</a>
 </div>
 
 <div class="main">
@@ -86,8 +82,8 @@ $groupes = $gc->listGroupes();
                 <tr>
                     <td><?= $groupe['idgroup'] ?></td>
                     <td><?= htmlspecialchars($groupe['nom']) ?></td>
-                    <td><?= htmlspecialchars(substr($groupe['description'], 0, 50)) ?>...</td>
-                    <td><?= $groupe['datecreation'] ?></td>
+                    <td><?= htmlspecialchars(substr($groupe['description'], 0, 50)) ?>...<\/a>
+                    <td><?= $groupe['datecreation'] ?>\<a>
                     <td>
                         <a href="edit.php?id=<?= $groupe['idgroup'] ?>" class="btn-edit">Modifier</a>
                         <button class="btn-delete" onclick="openDeleteModal(<?= $groupe['idgroup'] ?>, '<?= htmlspecialchars($groupe['nom']) ?>')">Supprimer</button>
@@ -101,7 +97,7 @@ $groupes = $gc->listGroupes();
     </table>
 </div>
 
-<!-- MODALE DE CONFIRMATION -->
+<!-- MODALE UNIQUE -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3>Confirmation de suppression</h3>

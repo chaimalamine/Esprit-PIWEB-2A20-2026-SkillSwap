@@ -1,10 +1,10 @@
 <?php
 require_once __DIR__ . '/../model/post.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/groupeC.php';
 
 class postC
 {
-    // ========== READ - Lister tous les posts ==========
     public function listPosts()
     {
         $db = config::getConnexion();
@@ -17,7 +17,6 @@ class postC
         }
     }
 
-    // ========== READ - Posts par groupe ==========
     public function getPostsByGroup($groupe_id)
     {
         $db = config::getConnexion();
@@ -31,7 +30,6 @@ class postC
         }
     }
 
-    // ========== READ - Post par ID ==========
     public function getPostById($id)
     {
         $db = config::getConnexion();
@@ -45,7 +43,6 @@ class postC
         }
     }
 
-    // ========== CREATE ==========
     public function createPost($post)
     {
         $db = config::getConnexion();
@@ -70,7 +67,12 @@ class postC
         }
     }
 
-    // ========== UPDATE ==========
+    public function getLastInsertId()
+    {
+        $db = config::getConnexion();
+        return $db->lastInsertId();
+    }
+
     public function updatePost($id, $post)
     {
         $db = config::getConnexion();
@@ -94,7 +96,6 @@ class postC
         }
     }
 
-    // ========== DELETE ==========
     public function deletePost($id)
     {
         $db = config::getConnexion();

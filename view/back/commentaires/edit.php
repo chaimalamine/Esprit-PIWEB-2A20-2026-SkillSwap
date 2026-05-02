@@ -1,6 +1,22 @@
 <?php
 require_once __DIR__ . '/../../../controller/commentaireC.php';
 
+// ========== VALIDATION DANS LA VUE ==========
+function validateCommentaire($data) {
+    $errors = [];
+    
+    if (empty(trim($data['contenu']))) {
+        $errors['contenu'] = "Le commentaire est requis";
+    } elseif (strlen(trim($data['contenu'])) > 500) {
+        $errors['contenu'] = "Le commentaire ne peut pas dépasser 500 caractères";
+    } elseif (strlen(trim($data['contenu'])) < 2) {
+        $errors['contenu'] = "Le commentaire doit contenir au moins 2 caractères";
+    }
+    
+    return $errors;
+}
+// =========================================
+
 $cc = new commentaireC();
 $commentaire = $cc->getCommentaireById($_GET['id']);
 $errors = [];
@@ -11,7 +27,7 @@ if (!$commentaire) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     session_start();
-    $errors = $cc->validate($_POST);
+    $errors = validateCommentaire($_POST);  // ← Appel à la fonction dans la vue
     
     if (empty($errors)) {
         $comObj = new commentaire($_POST['contenu'], $commentaire['datecom'], $commentaire['idpost']);
@@ -48,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
-    <a href="../groupes/index.php">Groupes</a>
+    <a href="../groupes/index.php"> Groupes</a>
     <a href="../posts/index.php"> Posts</a>
     <a href="index.php"> Commentaires</a>
 </div>

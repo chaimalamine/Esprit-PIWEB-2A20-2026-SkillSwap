@@ -1,12 +1,33 @@
 <?php
 require_once __DIR__ . '/../../../controller/postC.php';
 
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    die("ID du post manquant");
+// ========== VALIDATION DANS LA VUE ==========
+function validatePost($data) {
+    $errors = [];
+    
+    if (empty(trim($data['titre']))) {
+        $errors['titre'] = "Le titre est requis";
+    } elseif (strlen(trim($data['titre'])) < 3) {
+        $errors['titre'] = "Le titre doit contenir au moins 3 caractères";
+    } elseif (strlen(trim($data['titre'])) > 200) {
+        $errors['titre'] = "Le titre ne peut pas dépasser 200 caractères";
+    }
+    
+    if (empty(trim($data['contenu']))) {
+        $errors['contenu'] = "Le contenu est requis";
+    } elseif (strlen(trim($data['contenu'])) < 10) {
+        $errors['contenu'] = "Le contenu doit contenir au moins 10 caractères";
+    } elseif (strlen(trim($data['contenu'])) > 2000) {
+        $errors['contenu'] = "Le contenu ne peut pas dépasser 2000 caractères";
+    }
+    
+    return $errors;
 }
+// =========================================
 
 $pc = new postC();
 $post = $pc->getPostById($_GET['id']);
+$errors = [];
 
 if (!$post) {
     die("Post non trouvé");
@@ -14,21 +35,15 @@ if (!$post) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     session_start();
-    $errors = $pc->validate($_POST);
+    $errors = validatePost($_POST);  // ← Appel à la fonction dans la vue
     
     if (empty($errors)) {
         $postObj = new post($_POST['titre'], $_POST['contenu'], $post['datepost'], $post['idgroup']);
         $postObj->setIdpost($_GET['id']);
-        
-        $result = $pc->updatePost($_GET['id'], $postObj);
-        
-        if ($result) {
-            $_SESSION['success'] = "Post modifié avec succès";
-            header('Location: index.php');
-            exit();
-        } else {
-            $error = "Erreur lors de la modification";
-        }
+        $pc->updatePost($_GET['id'], $postObj);
+        $_SESSION['success'] = "Post modifié avec succès";
+        header('Location: index.php');
+        exit();
     }
 }
 ?>
@@ -47,8 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .main { flex: 1; margin-left: 220px; padding: 20px; }
         .form-container { max-width: 600px; background: white; padding: 30px; border-radius: 15px; margin-top: 20px; }
         .form-container h2 { margin-bottom: 20px; }
-        .form-container input, .form-container textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; }
-        .error { color: red; font-size: 12px; margin-bottom: 10px; }
+        .form-container label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-container input, .form-container textarea { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ddd; border-radius: 8px; }
+        .error-field { color: red; font-size: 12px; margin-bottom: 15px; margin-top: 0; }
         button { background: #6a11cb; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; }
         .cancel { margin-left: 10px; color: #666; text-decoration: none; }
     </style>
@@ -66,22 +82,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="form-container">
         <h2>Modifier le post</h2>
         
-        <?php if(isset($error)): ?>
-            <div class="error"><?= $error ?></div>
-        <?php endif; ?>
-        
-        <?php if(isset($errors) && !empty($errors)): ?>
-            <?php foreach($errors as $error): ?>
-                <div class="error"><?= $error ?></div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-        
         <form method="POST">
             <label>Titre :</label>
-            <input type="text" name="titre" value="<?= htmlspecialchars($post['titre']) ?>">
+            <input type="text" name="titre" value="<?= htmlspecialchars($_POST['titre'] ?? $post['titre']) ?>">
+            <?php if(isset($errors['titre'])): ?>
+                <div class="error-field"> <?= $errors['titre'] ?></div>
+            <?php endif; ?>
             
             <label>Contenu :</label>
-            <textarea name="contenu" rows="5"><?= htmlspecialchars($post['contenu']) ?></textarea>
+            <textarea name="contenu" rows="5"><?= htmlspecialchars($_POST['contenu'] ?? $post['contenu']) ?></textarea>
+            <?php if(isset($errors['contenu'])): ?>
+                <div class="error-field"> <?= $errors['contenu'] ?></div>
+            <?php endif; ?>
             
             <button type="submit">Modifier</button>
             <a href="index.php" class="cancel">Annuler</a>

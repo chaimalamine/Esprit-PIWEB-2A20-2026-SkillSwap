@@ -53,6 +53,7 @@ $commentaires = $cc->listCommentaires();
 
 <div class="sidebar">
     <h2>SkillSwap Admin</h2>
+    <a href="../dashboard.php"> Groupes & Communauté</a>
     <a href="../groupes/index.php"> Groupes</a>
     <a href="../posts/index.php"> Posts</a>
     <a href="index.php"> Commentaires</a>
@@ -77,9 +78,9 @@ $commentaires = $cc->listCommentaires();
                 <?php foreach($commentaires as $commentaire): ?>
                 <tr>
                     <td><?= $commentaire['idcom'] ?></td>
-                    <td><?= htmlspecialchars(substr($commentaire['contenu'], 0, 50)) ?>...</td>
-                    <td><?= $commentaire['idpost'] ?></td>
-                    <td><?= $commentaire['datecom'] ?></td>
+                    <td><?= htmlspecialchars(substr($commentaire['contenu'], 0, 50)) ?>...<\/a>
+                    <td><?= $commentaire['idpost'] ?>\<a>
+                    <td><?= $commentaire['datecom'] ?>\<a>
                     <td>
                         <a href="edit.php?id=<?= $commentaire['idcom'] ?>" class="btn-edit">Modifier</a>
                         <button class="btn-delete" onclick="openDeleteModal(<?= $commentaire['idcom'] ?>, '<?= htmlspecialchars(substr($commentaire['contenu'], 0, 30)) ?>...')">Supprimer</button>
@@ -93,6 +94,7 @@ $commentaires = $cc->listCommentaires();
     </table>
 </div>
 
+<!-- MODALE UNIQUE -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3>Confirmation de suppression</h3>
