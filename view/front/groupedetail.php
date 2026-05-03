@@ -69,11 +69,58 @@ $posts = $postsFiltres;
         }
         .comment-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
         .comment-section h4 { margin-bottom: 10px; color: #555; }
-        .comment { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
+        .comment { background: #f9f9f9; padding: 12px 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid #eee; }
         .comment-text { font-size: 14px; }
         .comment-meta { font-size: 11px; color: #888; margin-top: 5px; }
-        .comment-form textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 10px; font-family: inherit; resize: vertical; }
-        .btn-comment { background: linear-gradient(90deg, #7b2ff7, #a855f7); color: white; border: none; padding: 8px 20px; border-radius: 20px; margin-top: 10px; cursor: pointer; }
+        .btn-micro {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+        .btn-micro:hover {
+            background: #7b2ff7;
+            color: white;
+        }
+        .btn-micro.recording {
+            background: #ff4757;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .comment-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .comment-input-group textarea {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .btn-comment {
+            margin-top: 10px;
+            background: linear-gradient(90deg, #7b2ff7, #a855f7);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .comment-error {
+            color: red;
+            font-size: 12px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
         .suggestion-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
         .suggestion-btn { background: #f0f0f0; border: 1px solid #ddd; color: #333; padding: 4px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
         .suggestion-btn:hover { background: #7b2ff7; color: white; border-color: #7b2ff7; }
@@ -136,7 +183,7 @@ $posts = $postsFiltres;
                         $tempsRestant = $_SESSION['post_ephemere_' . $post['idpost']] - time();
                         $minutesRestantes = ceil($tempsRestant / 60);
                     ?>
-                        <span class="ephemere-badge">🔥 Éphémère (<?= $minutesRestantes ?> min)</span>
+                        <span class="ephemere-badge"> Éphémère (<?= $minutesRestantes ?> min)</span>
                     <?php endif; ?>
                 </h3>
                 <div class="post-content"><?= nl2br(htmlspecialchars($post['contenu'])) ?></div>
@@ -144,12 +191,12 @@ $posts = $postsFiltres;
                 
                 <div class="post-actions">
                     <button class="btn-like" data-id="<?= $post['idpost'] ?>" onclick="toggleLike(this, <?= $post['idpost'] ?>)">
-                        ❤️ J'aime (<span class="like-count-<?= $post['idpost'] ?>">0</span>)
+                         J'aime (<span class="like-count-<?= $post['idpost'] ?>">0</span>)
                     </button>
                     <button class="btn-copy" onclick="copyLink(<?= $groupe['idgroup'] ?>, <?= $post['idpost'] ?>)">
-                        🔗 Copier le lien
+                         Copier le lien
                     </button>
-                    <span id="copyMsg-<?= $post['idpost'] ?>" class="copy-msg">✅ Lien copié !</span>
+                    <span id="copyMsg-<?= $post['idpost'] ?>" class="copy-msg"> Lien copié !</span>
                 </div>
                 
                 <div class="comment-section">
@@ -170,6 +217,7 @@ $posts = $postsFiltres;
                         <p>Aucun commentaire pour le moment.</p>
                     <?php endif; ?>
                     
+                    <!-- Boutons de suggestion -->
                     <div class="suggestion-buttons">
                         <button type="button" class="suggestion-btn" onclick="addSuggestion('Merci pour ce partage !', <?= $post['idpost'] ?>)">👍 Merci</button>
                         <button type="button" class="suggestion-btn" onclick="addSuggestion('Bonne idée !', <?= $post['idpost'] ?>)">💡 Bonne idée</button>
@@ -178,11 +226,20 @@ $posts = $postsFiltres;
                         <button type="button" class="suggestion-btn" onclick="addSuggestion('À tester, merci !', <?= $post['idpost'] ?>)">🧪 À tester</button>
                     </div>
                     
+                    <!-- Formulaire commentaire avec validation sous le champ -->
                     <form class="comment-form" method="POST" action="createCommentaire.php">
                         <input type="hidden" name="idpost" value="<?= $post['idpost'] ?>">
                         <input type="hidden" name="idgroupe" value="<?= $groupe['idgroup'] ?>">
-                        <textarea name="contenu" id="commentTextarea_<?= $post['idpost'] ?>" rows="2" placeholder="Ajouter un commentaire..."></textarea>
-                        <button type="submit" class="btn-comment">Commenter</button>
+                        
+                        <div class="comment-input-group">
+                            <textarea name="contenu" id="commentTextarea_<?= $post['idpost'] ?>" rows="2" placeholder="Ajouter un commentaire..."></textarea>
+                            <button type="button" class="btn-micro" onclick="startDictation(<?= $post['idpost'] ?>, this)">🎤</button>
+                        </div>
+                        
+                        <!-- Zone d'affichage des erreurs sous le champ -->
+                        <div id="commentError_<?= $post['idpost'] ?>" class="comment-error"></div>
+                        
+                        <button type="submit" class="btn-comment" onclick="return validateComment(event, <?= $post['idpost'] ?>)">Commenter</button>
                     </form>
                 </div>
             </div>
@@ -236,6 +293,107 @@ function addSuggestion(texte, postId) {
         textarea.value = currentText + ' ' + texte;
     }
     textarea.focus();
+}
+
+// Validation du commentaire (sans alerte)
+function validateComment(event, postId) {
+    let textarea = document.getElementById('commentTextarea_' + postId);
+    let contenu = textarea.value.trim();
+    let errorDiv = document.getElementById('commentError_' + postId);
+    
+    // Réinitialiser l'erreur
+    errorDiv.innerHTML = '';
+    errorDiv.style.display = 'block';
+    
+    // Validation
+    if (contenu === '') {
+        errorDiv.innerHTML = ' Le commentaire est requis';
+        event.preventDefault();
+        return false;
+    } else if (contenu.length < 2) {
+        errorDiv.innerHTML = ' Le commentaire doit contenir au moins 2 caractères';
+        event.preventDefault();
+        return false;
+    } else if (contenu.length > 500) {
+        errorDiv.innerHTML = ' Le commentaire ne peut pas dépasser 500 caractères';
+        event.preventDefault();
+        return false;
+    }
+    
+    errorDiv.style.display = 'none';
+    return true;
+}
+
+// Fonction de reconnaissance vocale
+let activeRecognition = null;
+
+function startDictation(postId, btnElement) {
+    let textarea = document.getElementById('commentTextarea_' + postId);
+    
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        let errorDiv = document.getElementById('commentError_' + postId);
+        errorDiv.innerHTML = ' Reconnaissance vocale non supportée par ce navigateur. Utilisez Chrome.';
+        errorDiv.style.display = 'block';
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
+        return;
+    }
+    
+    if (activeRecognition) {
+        try { activeRecognition.abort(); } catch(e) {}
+        activeRecognition = null;
+    }
+    
+    let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'fr-FR';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    
+    recognition.onstart = function() {
+        btnElement.classList.add('recording');
+        btnElement.textContent = '';
+        activeRecognition = recognition;
+    };
+    
+    recognition.onend = function() {
+        btnElement.classList.remove('recording');
+        btnElement.textContent = '';
+        activeRecognition = null;
+    };
+    
+    recognition.onresult = function(event) {
+        let transcript = event.results[0][0].transcript;
+        let currentText = textarea.value;
+        
+        if (currentText.trim() === '') {
+            textarea.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+        } else {
+            textarea.value = currentText + ' ' + transcript.charAt(0).toUpperCase() + transcript.slice(1);
+        }
+        
+        textarea.focus();
+        // Déclencher la validation après ajout du texte
+        let fakeEvent = { preventDefault: function() {} };
+        validateComment(fakeEvent, postId);
+    };
+    
+    recognition.onerror = function(event) {
+        btnElement.classList.remove('recording');
+        btnElement.textContent = '';
+        activeRecognition = null;
+        
+        let errorDiv = document.getElementById('commentError_' + postId);
+        if (event.error === 'not-allowed') {
+            errorDiv.innerHTML = ' Autorisez l\'accès au microphone dans les paramètres du navigateur.';
+        } else if (event.error === 'no-speech') {
+            errorDiv.innerHTML = ' Aucune parole détectée. Parlez plus fort.';
+        } else {
+            errorDiv.innerHTML = ' ' + event.error;
+        }
+        errorDiv.style.display = 'block';
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
+    };
+    
+    recognition.start();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

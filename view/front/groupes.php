@@ -127,9 +127,9 @@ if (!empty($search)) {
         <div class="search-container">
             <form method="GET" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Rechercher un groupe...">
-                <button type="submit">🔍 Rechercher</button>
+                <button type="submit"> Rechercher</button>
                 <?php if(!empty($search)): ?>
-                    <a href="groupes.php">✖ Effacer</a>
+                    <a href="groupes.php"> Effacer</a>
                 <?php endif; ?>
             </form>
         </div>
