@@ -6,10 +6,32 @@ require_once 'controller/EventController.php';
 require_once 'controller/RessourceController.php';
 
 session_start();
+
+// SIMULATION DE CONNEXION (À SUPPRIMER PLUS TARD) 
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = 1; 
+}
+
 $eventController = new EventController();
 $ressourceController = new RessourceController();
 
-// --- ACTION AJAX POUR RÉCUPÉRER LES AVIS ---
+// RÉCUPÉRATION DES CRÉDITS UTILISATEUR 
+$userCredits = 0;
+if (isset($_SESSION['user_id'])) {
+    try {
+        $db = config::getConnexion();
+        $stmt = $db->prepare('SELECT credits FROM utilisateur WHERE id_utilisateur = :id'); 
+        $stmt->execute([':id' => $_SESSION['user_id']]);
+        $user = $stmt->fetch();
+        if ($user) {
+            $userCredits = $user['credits'];
+        }
+    } catch (Exception $e) {
+        // Erreur silencieuse
+    }
+}
+
+//ACTION AJAX POUR RÉCUPÉRER LES AVIS 
 if (isset($_GET['action']) && $_GET['action'] === 'get_reviews' && isset($_GET['id'])) {
     header('Content-Type: application/json');
     $id = intval($_GET['id']);
@@ -24,6 +46,79 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_reviews' && isset($_GET['
     exit();
 }
 
+// --- ACTION AJAX POUR DÉTECTER LES CONFLITS (Avec Gestion de Stock) ---
+if (isset($_GET['action']) && $_GET['action'] === 'check_conflict') {
+    header('Content-Type: application/json');
+    
+    $idRessource = intval($_GET['id_ressource'] ?? 0);
+    $debut = $_GET['debut'] ?? '';
+    $fin = $_GET['fin'] ?? '';
+    $nouvelleQuantite = intval($_GET['quantite'] ?? 1);
+
+    if ($idRessource && $debut && $fin) {
+        try {
+            $db = config::getConnexion();
+            
+            // 1. Récupérer la quantité totale disponible de cette ressource
+            $stmtRes = $db->prepare('SELECT quantite_totale FROM ressource WHERE id_ressource = :res');
+            $stmtRes->execute([':res' => $idRessource]);
+            $ressource = $stmtRes->fetch();
+            
+            if (!$ressource) {
+                echo json_encode(['conflits' => [], 'error' => 'Ressource introuvable']);
+                exit();
+            }
+            
+            $qteTotale = intval($ressource['quantite_totale']);
+
+            // 2. Calculer la quantité DÉJÀ réservée sur ce créneau horaire
+            $idEvent = intval($_GET['id_evenement'] ?? 0);
+            
+            $sql = "SELECT SUM(er.quantite_utilisee) as qte_reservee 
+                    FROM evenement_ressource er 
+                    JOIN evenement e ON er.id_evenement = e.id_evenement 
+                    WHERE er.id_ressource = :res 
+                    AND e.date_debut < :fin 
+                    AND e.date_fin > :debut";
+            
+            if ($idEvent > 0) {
+                $sql .= " AND e.id_evenement != :idEvt";
+            }
+
+            $stmt = $db->prepare($sql);
+            $params = [':res' => $idRessource, ':debut' => $debut, ':fin' => $fin];
+            if ($idEvent > 0) $params[':idEvt'] = $idEvent;
+
+            $stmt->execute($params);
+            $result = $stmt->fetch();
+            
+            $qteDejaReservee = intval($result['qte_reservee'] ?? 0);
+            $qteApresDemande = $qteDejaReservee + $nouvelleQuantite;
+
+            // 3. Vérification du conflit
+            if ($qteApresDemande > $qteTotale) {
+                // CONFLIT DE STOCK !
+                $conflits = [
+                    [
+                        'titre' => "Stock Insuffisant",
+                        'details' => "Il reste seulement " . ($qteTotale - $qteDejaReservee) . " unité(s) disponible(s) sur ce créneau. Vous en demandez $nouvelleQuantite."
+                    ]
+                ];
+                echo json_encode(['conflits' => $conflits]);
+            } else {
+                // Pas de conflit
+                echo json_encode(['conflits' => []]);
+            }
+
+        } catch (Exception $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['conflits' => []]);
+    }
+    exit();
+}
+
 // INITIALISATION
 $errors = []; $fieldErrors = []; $success = '';
 $editModeEvent = false; $editEvent = null;
@@ -33,7 +128,7 @@ $searchEvent = $_GET['search'] ?? ''; $sortEvent = $_GET['sort'] ?? '';
 $searchRessource = $_GET['search_ressource'] ?? ''; $typeFilter = $_GET['type_ressource'] ?? '';
 $sortRessource = $_GET['sort_ressource'] ?? '';
 
-// --- TRAITEMENT DU FEEDBACK (Version Robuste) ---
+// --- TRAITEMENT DU FEEDBACK ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
     $idRessource = intval($_POST['id_ressource'] ?? 0);
     $note = intval($_POST['note'] ?? 0);
@@ -42,12 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
     if ($idRessource > 0 && $note >= 1 && $note <= 5) {
         try {
             $db = config::getConnexion();
-            
-            // On insère avec id_evenement = NULL car on note depuis la liste globale
             $req = $db->prepare('INSERT INTO feedback_ressource (id_evenement, id_ressource, note, commentaire) VALUES (NULL, :res, :note, :com)');
             $req->execute([':res' => $idRessource, ':note' => $note, ':com' => $commentaire]);
 
-            // Recalculer la moyenne
             $stmt = $db->prepare('SELECT AVG(note) as moy, COUNT(*) as cnt FROM feedback_ressource WHERE id_ressource = :res');
             $stmt->execute([':res' => $idRessource]);
             $data = $stmt->fetch();
@@ -55,12 +147,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_feedback'])) {
             $nouvelleMoyenne = $data['moy'] ? round($data['moy'], 2) : 0;
             $nouveauCount = $data['cnt'] ? $data['cnt'] : 0;
 
-            // Mettre à jour la ressource
             $update = $db->prepare('UPDATE ressource SET note_moyenne = :moy, nombre_avis = :cnt WHERE id_ressource = :res');
             $update->execute([':moy' => $nouvelleMoyenne, ':cnt' => $nouveauCount, ':res' => $idRessource]);
 
             $success = "⭐ Avis envoyé avec succès !";
-            
         } catch (Exception $e) {
             $errors[] = "Erreur : " . $e->getMessage();
         }
@@ -79,43 +169,55 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit_ressource' && isset($_GE
     if ($editRessource) $editModeRessource = true;
 }
 
-// VALIDATION ÉVÉNEMENTS
+// VALIDATION ÉVÉNEMENTS (AVEC LIEN REUNION)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_event'])) {
     $titre = trim($_POST['titre'] ?? ''); 
     $description = trim($_POST['description'] ?? '');
     
-    // Gest specifique du Lieu (Select + Input Autre)
     $lieu_select = $_POST['lieu_select'] ?? '';
     $lieu_autre = trim($_POST['lieu_autre'] ?? '');
+    $lien_reunion = trim($_POST['lien_reunion'] ?? ''); // NOUVEAU
+    
+    // Si ce n'est pas en ligne, on vide le lien
+    if ($lieu_select !== 'En ligne') {
+        $lien_reunion = null;
+    }
+    
     $lieu = ($lieu_select === 'autre') ? $lieu_autre : $lieu_select;
     $date_debut = trim($_POST['date_debut'] ?? '');
     $date_fin = trim($_POST['date_fin'] ?? $date_debut);
     $capacite_max = trim($_POST['capacite_max'] ?? '');
     $id = $_POST['id_evenement'] ?? null;
 
+    // Validation stricte avec messages d'erreur
     if (empty($titre)) $fieldErrors['titre'] = "Le titre est obligatoire.";
     if (empty($description)) $fieldErrors['description'] = "La description est obligatoire.";
     if (empty($lieu)) $fieldErrors['lieu'] = "Le lieu est obligatoire.";
     
-    // Validation dates 
+    // Validation spécifique pour le lien si c'est en ligne
+    if ($lieu_select === 'En ligne' && empty($lien_reunion)) {
+        $fieldErrors['lien_reunion'] = "Le lien de réunion est obligatoire.";
+    }
+
     if (empty($date_debut)) $fieldErrors['date_debut'] = "La date de début est obligatoire.";
     if (!empty($date_fin) && $date_fin < $date_debut) $fieldErrors['date_fin'] = "La date de fin doit être après le début.";
     
-    if (empty($capacite_max) || !ctype_digit($capacite_max) || (int)$capacite_max <= 0) $fieldErrors['capacite_max'] = "Entier positif requis.";
+    if (empty($capacite_max) || !ctype_digit($capacite_max) || (int)$capacite_max <= 0) $fieldErrors['capacite_max'] = "Capacité invalide.";
     $capacite_max = (int)$capacite_max;
 
     if (empty($fieldErrors) && empty($errors)) {
-        // Conversion format HTML  vers SQL  si nécessaire pour le Model 
         $date_debut_sql = str_replace('T', ' ', $date_debut);
         $date_fin_sql = str_replace('T', ' ', $date_fin);
 
-        $event = new Event($titre, $description, $date_debut_sql, $date_fin_sql, $lieu, $capacite_max, $capacite_max, $_SESSION['user_id'] ?? 1, 'Actif');
+        // Création de l'objet Event avec le lien de réunion
+        $event = new Event($titre, $description, $date_debut_sql, $date_fin_sql, $lieu, $capacite_max, $capacite_max, $_SESSION['user_id'] ?? 1, 'Actif', $lien_reunion);
+        
         if ($id && is_numeric($id)) { 
             $eventController->updateEvent($event, $id); $success = "Événement modifié !";
              $editModeEvent = false;
         } else { 
             $eventController->addEvent($event);
-             $success = "Événement publié !"; 
+             $success = "Événement publié ! (+5 Crédits 💎)"; 
         }
         header('Location: dashboard.php?tab=events&msg=success' . (!empty($searchEvent) ? '&search=' . urlencode($searchEvent) : '') . (!empty($sortEvent) ? '&sort=' . $sortEvent : ''));
         exit();
@@ -127,16 +229,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_event' && isset($_GET[
     exit();
 }
 
-// VALIDATION RESSOURCES
+// VALIDATION RESSOURCES (AVEC GESTION PREMIUM)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_ressource'])) {
     $nom = trim($_POST['nom'] ?? '');
-     $type = trim($_POST['type'] ?? '');
+    $type = trim($_POST['type'] ?? '');
     $description = trim($_POST['description_ressource'] ?? '');
     $quantite_disponible = trim($_POST['quantite_disponible'] ?? ''); 
     $quantite_totale = trim($_POST['quantite_totale'] ?? '');
     $etat = trim($_POST['etat'] ?? '');
-     $statut = trim($_POST['statut'] ?? 'Disponible');
+    $statut = trim($_POST['statut'] ?? 'Disponible');
     $date_achat = trim($_POST['date_achat'] ?? ''); 
+    
+    // NOUVEAU : Récupération des champs Premium
+    $est_premium = isset($_POST['est_premium']) ? 1 : 0;
+    $cout_credit = intval($_POST['cout_credit'] ?? 30);
+
     $id = $_POST['id_ressource'] ?? null;
 
     if (empty($nom)) $fieldErrors['nom'] = "Le nom est obligatoire.";
@@ -150,11 +257,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_ressource'])) 
     
     if (empty($fieldErrors) && empty($errors)) {
         $newRessource = new Ressource($nom, $type, $description, $quantite_disponible, $quantite_totale, $etat, $_SESSION['user_id'] ?? 1, $date_achat, $statut);
-        if ($id && is_numeric($id)) { $ressourceController->updateRessource($newRessource, $id);
-         $success = "Ressource modifiée !";
-          }
-        else { $ressourceController->addRessource($newRessource); 
-        $success = "Ressource ajoutée !"; 
+        
+        $db = config::getConnexion();
+        
+        if ($id && is_numeric($id)) { 
+            $ressourceController->updateRessource($newRessource, $id);
+            
+            // Update spécifique pour les colonnes Premium
+            $updPrem = $db->prepare('UPDATE ressource SET est_premium = :prem, cout_credit = :cout WHERE id_ressource = :id');
+            $updPrem->execute([':prem' => $est_premium, ':cout' => $cout_credit, ':id' => $id]);
+            
+            $success = "Ressource modifiée !";
+        } else { 
+            $ressourceController->addRessource($newRessource); 
+            
+            // Récupérer le dernier ID inséré pour mettre à jour les colonnes premium
+            $lastId = $db->lastInsertId();
+            $updPrem = $db->prepare('UPDATE ressource SET est_premium = :prem, cout_credit = :cout WHERE id_ressource = :id');
+            $updPrem->execute([':prem' => $est_premium, ':cout' => $cout_credit, ':id' => $lastId]);
+            
+            $success = "Ressource ajoutée !"; 
         }
         $editModeRessource = false;
         header('Location: dashboard.php?tab=ressources&msg=updated');
@@ -167,57 +289,113 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_ressource' && isset($_
     exit();
 }
 
-// GESTION DES ASSOCIATIONS
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_associer'])) { //On récupère les valeurs envoyées par le formulaire HTML
+// GESTION DES ASSOCIATIONS (AVEC GESTION CRÉDITS PREMIUM)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_associer'])) { 
     $id_evenement = $_POST['id_evenement'] ?? null;
     $id_ressource = $_POST['id_ressource'] ?? null;
-    $quantite = max(1, (int)($_POST['quantite_utilisee'] ?? 1)); //forces val min a 1
+    $quantite = max(1, (int)($_POST['quantite_utilisee'] ?? 1)); 
     $statut = $_POST['statut_reservation'] ?? 'En attente';
+    $idUser = $_SESSION['user_id'] ?? 0; // ID de l'utilisateur connecté
     
-    if ($id_evenement && $id_ressource) {
-        $res = $ressourceController->getRessource($id_ressource);
-        if ($res && $res['quantite_disponible'] >= $quantite) {
-            // enregistr dans la bbd 
-            $db = config::getConnexion();
-            try {
-                $req = $db->prepare('INSERT INTO evenement_ressource (id_evenement, id_ressource, quantite_utilisee, statut_reservation) VALUES (:idEvent, :idRess, :quantite, :statut) ON DUPLICATE KEY UPDATE quantite_utilisee = :quantite, statut_reservation = :statut');
-                $req->execute(['idEvent' => $id_evenement,
-                 'idRess' => $id_ressource,
-                  'quantite' => $quantite, 
-                  'statut' => $statut]);
-                $success = "✅ Ressource associée avec succès !";
-                $activeAssocEventId = $id_evenement; // Pour rouvrir le modal après (enrg id dans active..)
-            } catch (Exception $e) {
-                 $errors[] = "Erreur Base de donnees " . $e->getMessage(); 
-                 }
-        } else {
-            $errors[] = "Stock insuffisant ou ressource invalide.";
+    if ($id_evenement && $id_ressource && $idUser) {
+        $db = config::getConnexion();
+        
+        try {
+            $db->beginTransaction();
+
+            //  Vérifier si la ressource est Premium
+            $stmtRes = $db->prepare('SELECT est_premium, cout_credit, quantite_disponible FROM ressource WHERE id_ressource = :res');
+            $stmtRes->execute([':res' => $id_ressource]);
+            $resData = $stmtRes->fetch();
+
+            if (!$resData) {
+                throw new Exception("Ressource introuvable.");
+            }
+
+            //  Vérification de la qte dispo 
+            if ($resData['quantite_disponible'] < $quantite) {
+                throw new Exception("Stock insuffisant ! Il ne reste que " . $resData['quantite_disponible'] . " unités.");
+            }
+
+            //  VÉRIFICATION DES CRÉDITS SI PREMIUM
+            if ($resData['est_premium'] == 1) {
+                $cout = intval($resData['cout_credit']);
+                
+                // Vérifier le solde de l'utilisateur
+                $stmtUser = $db->prepare('SELECT credits FROM utilisateur WHERE id_utilisateur = :id');
+                $stmtUser->execute([':id' => $idUser]);
+                $userData = $stmtUser->fetch();
+
+                if (!$userData || $userData['credits'] < $cout) {
+                    throw new Exception("⛔ Accès refusé ! Cette ressource est Premium. Il vous faut $cout crédits (Vous en avez : " . ($userData['credits'] ?? 0) . ").");
+                }
+
+                // Déduire les crédits
+                $updateCredits = $db->prepare('UPDATE utilisateur SET credits = credits - :cout WHERE id_utilisateur = :id');
+                $updateCredits->execute([':cout' => $cout, ':id' => $idUser]);
+            }
+
+            //  Enregistrer l'association
+            $req = $db->prepare('INSERT INTO evenement_ressource (id_evenement, id_ressource, quantite_utilisee, statut_reservation) VALUES (:idEvent, :idRess, :quantite, :statut) ON DUPLICATE KEY UPDATE quantite_utilisee = :quantite, statut_reservation = :statut');
+            $req->execute([
+                'idEvent' => $id_evenement,
+                'idRess' => $id_ressource,
+                'quantite' => $quantite, 
+                'statut' => $statut
+            ]);
+
+            // Mettre à jour le stock (Simplifié : on retire la quantité)
+            $updateStock = $db->prepare('UPDATE ressource SET quantite_disponible = quantite_disponible - :diff WHERE id_ressource = :res');
+            $updateStock->execute([':diff' => $quantite, ':res' => $id_ressource]);
+
+            $db->commit();
+            $success = "✅ Ressource associée ! ";
+            if(isset($resData['est_premium']) && $resData['est_premium']) $success .= "(-$cout crédits 💎)";
+            $activeAssocEventId = $id_evenement; 
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            $errors[] = $e->getMessage();
         }
     } else {
         $errors[] = "Veuillez sélectionner une ressource.";
     }
 }
 
-// Dissociation
+// Dissociation (AVEC RESTITUTION DU STOCK)
 if (isset($_GET['action']) && $_GET['action'] === 'dissocier' && isset($_GET['id_evenement']) && isset($_GET['id_ressource'])) {
     $db = config::getConnexion();
     try {
+        //  Récupérer la quantité à rendre
+        $check = $db->prepare('SELECT quantite_utilisee FROM evenement_ressource WHERE id_evenement = :evt AND id_ressource = :res');
+        $check->execute([':evt' => $_GET['id_evenement'], ':res' => $_GET['id_ressource']]);
+        $existant = $check->fetch();
+        $qteARendre = $existant ? intval($existant['quantite_utilisee']) : 0;
+
+        //  Supprimer le lien
         $req = $db->prepare('DELETE FROM evenement_ressource WHERE id_evenement = :idEvent AND id_ressource = :idRess');
         $req->execute(['idEvent' => $_GET['id_evenement'], 'idRess' => $_GET['id_ressource']]);
+
+        //  Rendre le stock
+        if ($qteARendre > 0) {
+            $updateStock = $db->prepare('UPDATE ressource SET quantite_disponible = quantite_disponible + :qte WHERE id_ressource = :res');
+            $updateStock->execute([':qte' => $qteARendre, ':res' => $_GET['id_ressource']]);
+        }
+
         header('Location: dashboard.php?tab=events&assoc_event_id='.$_GET['id_evenement'].'&msg=dissociated');
         exit();
     } catch (Exception $e) { 
         $errors[] = "Erreur: " . $e->getMessage();
-         }
+     }
 }
 
 // lister les donnees 
 $activeTab = $_GET['tab'] ?? 'events';
-$events = $eventController->listeEvents($searchEvent, $sortEvent);  //lister les evenements
+$events = $eventController->listeEvents($searchEvent, $sortEvent);
 $ressources = $ressourceController->listeRessources($searchRessource, $typeFilter, $sortRessource);
 $typesRessources = $ressourceController->getTypesRessources();
 
-// Précharger TOUTES les associations pour affichage instantané dans le modal
+// Précharger TOUTES les associations
 $allAssociations = [];
 try {
     $db = config::getConnexion();
@@ -225,18 +403,19 @@ try {
     foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $allAssociations[$row['id_evenement']][] = $row;
     }
-} catch(Exception $e) { /* Table vide ou inexistante */ }
+} catch(Exception $e) { /* Table vide */ }
 
 $activeAssocEventId = $_GET['assoc_event_id'] ?? null;
 
+// FONCTIONS D'AFFICHAGE DES ERREURS
 function showFieldError($f) { 
     global $fieldErrors; 
     return isset($fieldErrors[$f]) ? '<div class="field-error">'.htmlspecialchars($fieldErrors[$f]).'</div>' : '';
-     }
+}
 function inputClass($f) { 
     global $fieldErrors;
-     return isset($fieldErrors[$f]) ? ' error-input' : '';
-      }
+    return isset($fieldErrors[$f]) ? ' error-input' : '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -298,6 +477,15 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
 <body>
 <div class="sidebar">
     <h2>SkillSwap</h2>
+    
+    <!-- AFFICHAGE DES CRÉDITS -->
+    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.2);">
+        <span style="font-size: 12px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">Mes Crédits</span>
+        <div style="font-size: 28px; font-weight: bold; color: #fde68a; margin-top: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+             <?= $userCredits ?> pts
+        </div>
+    </div>
+
     <a href="dashboard.php" class="active">📊 Dashboard</a>
     <a href="dashboard.php?tab=events">📅 Événements</a>
     <a href="dashboard.php?tab=ressources">🛠️ Ressources</a>
@@ -335,40 +523,58 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                 <?php if($editModeEvent && $editEvent): ?><input type="hidden" name="id_evenement" value="<?= $editEvent['id_evenement'] ?>"><?php endif; ?>
                 
                 <div class="form-grid">
-                    <div class="form-group"><label>Titre *</label><input type="text" name="titre" class="<?=inputClass('titre')?>" value="<?=htmlspecialchars($_POST['titre']??($editEvent['titre']??''))?>"><?=showFieldError('titre')?></div>
+                    <!-- TITRE -->
+                    <div class="form-group">
+                        <label>Titre *</label>
+                        <input type="text" name="titre" class="<?=inputClass('titre')?>" value="<?=htmlspecialchars($_POST['titre']??($editEvent['titre']??''))?>">
+                        <?=showFieldError('titre')?>
+                    </div>
                     
-                    
+                    <!-- LIEU & LIEN REUNION -->
                     <div class="form-group">
                         <label>Lieu *</label>
                         <?php 
-                            // Déterminer la valeur sélectionnée précédemment
                             $prevLieu = $_POST['lieu_select'] ?? ($editEvent['lieu'] ?? '');
                             $isAutre = ($prevLieu !== 'En ligne');
                             $lieuValue = $isAutre ? htmlspecialchars($_POST['lieu_autre'] ?? ($editEvent['lieu'] ?? '')) : '';
+                            $lienReunion = htmlspecialchars($_POST['lien_reunion'] ?? ($editEvent['lien_reunion'] ?? ''));
                         ?>
-                        <select name="lieu_select" id="lieu_select" class="<?=inputClass('lieu')?>" onchange="toggleLieuInput()" required>
+                        <select name="lieu_select" id="lieu_select" class="<?=inputClass('lieu')?>" onchange="toggleLieuInput()">
                             <option value="">-- Choisir --</option>
-                            <option value="En ligne" <?= $prevLieu === 'En ligne' ? 'selected' : '' ?>>En ligne</option>
+                            <option value="En ligne" <?= $prevLieu === 'En ligne' ? 'selected' : '' ?>>En ligne (Zoom/Meet)</option>
                             <option value="autre" <?= $isAutre ? 'selected' : '' ?>>Autre (Saisir manuellement)</option>
                         </select>
+                        
                         <input type="text" name="lieu_autre" id="lieu_autre" placeholder="Précisez le lieu..." 
                                value="<?= $lieuValue ?>" 
                                style="margin-top:5px; display: <?= $isAutre ? 'block' : 'none' ?>;">
+                        
+                        <input type="url" name="lien_reunion" id="lien_reunion" placeholder="Collez le lien Zoom/Meet ici..." 
+                               value="<?= $lienReunion ?>" 
+                               style="margin-top:5px; display: <?= ($prevLieu === 'En ligne') ? 'block' : 'none' ?>;">
+                               
                         <?=showFieldError('lieu')?>
+                        <?=showFieldError('lien_reunion')?>
                     </div>
                 </div>
 
-                <div class="form-group"><label>Description *</label><textarea name="description" rows="3" class="<?=inputClass('description')?>"><?=htmlspecialchars($_POST['description']??($editEvent['description']??''))?></textarea><?=showFieldError('description')?></div>
-                
+                <!-- DESCRIPTION -->
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea name="description" rows="3" class="<?=inputClass('description')?>"><?=htmlspecialchars($_POST['description']??($editEvent['description']??''))?></textarea>
+                    <?=showFieldError('description')?>
+                </div>
                 
                 <div class="form-grid">
+                    <!-- DATE DEBUT -->
                     <div class="form-group">
                         <label>Date début *</label>
                         <input type="datetime-local" name="date_debut" class="<?=inputClass('date_debut')?>" 
-                               value="<?= isset($_POST['date_debut']) ? htmlspecialchars($_POST['date_debut']) : (!empty($editEvent['date_debut']) ? date('Y-m-d\TH:i', strtotime($editEvent['date_debut'])) : '') ?>" 
-                               required>
+                               value="<?= isset($_POST['date_debut']) ? htmlspecialchars($_POST['date_debut']) : (!empty($editEvent['date_debut']) ? date('Y-m-d\TH:i', strtotime($editEvent['date_debut'])) : '') ?>">
                         <?=showFieldError('date_debut')?>
                     </div>
+                    
+                    <!-- DATE FIN -->
                     <div class="form-group">
                         <label>Date fin</label>
                         <input type="datetime-local" name="date_fin" class="<?=inputClass('date_fin')?>" 
@@ -377,11 +583,19 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                     </div>
                 </div>
 
-                <div class="form-group"><label>Capacité *</label><input type="text" name="capacite_max" class="<?=inputClass('capacite_max')?>" value="<?=htmlspecialchars($_POST['capacite_max']??($editEvent['capacite_max']??'10'))?>"><?=showFieldError('capacite_max')?></div>
+                <!-- CAPACITE -->
+                <div class="form-group">
+                    <label>Capacité *</label>
+                    <input type="number" name="capacite_max" class="<?=inputClass('capacite_max')?>" value="<?=htmlspecialchars($_POST['capacite_max']??($editEvent['capacite_max']??'10'))?>">
+                    <?=showFieldError('capacite_max')?>
+                </div>
+
                 <button type="submit" name="<?= $editModeEvent?'update_event':'add_event' ?>" class="btn-submit"><?= $editModeEvent?'💾 Mettre à jour':'🚀 Publier' ?></button>
                 <?php if($editModeEvent): ?><a href="?tab=events<?= !empty($searchEvent)?'&search='.urlencode($searchEvent):'' ?><?= !empty($sortEvent)?'&sort='.$sortEvent:'' ?>" class="btn-cancel">Annuler</a><?php endif; ?>
             </form>
         </div>
+        
+        <!-- LISTE EVENEMENTS -->
         <div class="card">
             <h3 style="margin-top:0;color:#7b2ff7;">📋 Mes Événements</h3>
             <form method="GET" class="search-sort"><input type="hidden" name="tab" value="events"><input type="text" name="search" placeholder="Rechercher..." value="<?=htmlspecialchars($searchEvent)?>"><select name="sort"><option value="">Trier par...</option><option value="titre" <?=$sortEvent==='titre'?'selected':''?>>Titre</option><option value="date_debut" <?=$sortEvent==='date_debut'?'selected':''?>>Date</option><option value="lieu" <?=$sortEvent==='lieu'?'selected':''?>>Lieu</option></select><button type="submit">🔍</button><?php if(!empty($searchEvent)):?><a href="?tab=events" class="reset">✕</a><?php endif; ?></form>
@@ -396,7 +610,7 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                 <td><?=$dateAff?></td>
                 <td><?= (int)$e['capacite_max'] ?></td>
                 <td>
-                    <button type="button" class="btn-jointure" onclick="openAssocModal(<?= (int)$e['id_evenement'] ?>, '<?= addslashes($e['titre']) ?>')">🔗 Associer (<?= $nbAssoc ?>)</button>
+                    <button type="button" class="btn-jointure" onclick="openAssocModal(<?= (int)$e['id_evenement'] ?>, '<?= addslashes($e['titre']) ?>', '<?= $e['date_debut'] ?>', '<?= $e['date_fin'] ?>')">🔗 Associer (<?= $nbAssoc ?>)</button>
                     <a href="#" class="btn-edit" onclick="openEditModal('?tab=events&action=edit_event&id=<?= $e['id_evenement'] ?><?= !empty($searchEvent)?'&search='.urlencode($searchEvent):'' ?><?= !empty($sortEvent)?'&sort='.$sortEvent:'' ?>');return false;">✏️</a>
                     <a href="#" class="btn-delete" onclick="openDeleteModal('?tab=events&action=delete_event&id=<?= $e['id_evenement'] ?><?= !empty($searchEvent)?'&search='.urlencode($searchEvent):'' ?><?= !empty($sortEvent)?'&sort='.$sortEvent:'' ?>','événement');return false;">🗑️</a>
                 </td>
@@ -422,9 +636,9 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                     <div class="form-group"><label>Type</label>
                     <select name="type" class="<?=inputClass('type')?>"><option value="">Sélectionner...</option><option value="Matériel" <?=($_POST['type']??$editRessource['type']??'')==='Matériel'?'selected':''?>>Matériel</option><option value="Salle" <?=($_POST['type']??$editRessource['type']??'')==='Salle'?'selected':''?>>Salle</option><option value="Équipement" <?=($_POST['type']??$editRessource['type']??'')==='Équipement'?'selected':''?>>Équipement</option><option value="Consommable" <?=($_POST['type']??$editRessource['type']??'')==='Consommable'?'selected':''?>>Consommable</option><option value="Autre" <?=($_POST['type']??$editRessource['type']??'')==='Autre'?'selected':''?>>Autre</option></select><?=showFieldError('type')?></div>
                     <div class="form-group"><label>Qté dispo *</label>
-                    <input type="text" name="quantite_disponible" class="<?=inputClass('quantite_disponible')?>" value="<?=htmlspecialchars($_POST['quantite_disponible']??($editRessource['quantite_disponible']??'0'))?>"><?=showFieldError('quantite_disponible')?></div>
+                    <input type="number" name="quantite_disponible" class="<?=inputClass('quantite_disponible')?>" value="<?=htmlspecialchars($_POST['quantite_disponible']??($editRessource['quantite_disponible']??'0'))?>"><?=showFieldError('quantite_disponible')?></div>
                     <div class="form-group"><label>Qté totale *</label>
-                    <input type="text" name="quantite_totale" class="<?=inputClass('quantite_totale')?>" value="<?=htmlspecialchars($_POST['quantite_totale']??($editRessource['quantite_totale']??'0'))?>"><?=showFieldError('quantite_totale')?></div>
+                    <input type="number" name="quantite_totale" class="<?=inputClass('quantite_totale')?>" value="<?=htmlspecialchars($_POST['quantite_totale']??($editRessource['quantite_totale']??'0'))?>"><?=showFieldError('quantite_totale')?></div>
                     <div class="form-group"><label>État</label>
                     <select name="etat" class="<?=inputClass('etat')?>"><option value="">Sélectionner...</option><option value="Neuf" <?=($_POST['etat']??$editRessource['etat']??'')==='Neuf'?'selected':''?>>Neuf</option><option value="Bon état" <?=($_POST['etat']??$editRessource['etat']??'')==='Bon état'?'selected':''?>>Bon état</option><option value="Usé" <?=($_POST['etat']??$editRessource['etat']??'')==='Usé'?'selected':''?>>Usé</option><option value="À réparer" <?=($_POST['etat']??$editRessource['etat']??'')==='À réparer'?'selected':''?>>À réparer</option></select><?=showFieldError('etat')?></div>
                     <div class="form-group"><label>Statut</label>
@@ -437,6 +651,22 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                     </div>
                 </div>
                 <div class="form-group"><label>Description</label><textarea name="description_ressource" rows="3" class="<?=inputClass('description_ressource')?>"><?=htmlspecialchars($_POST['description_ressource']??($editRessource['description']??''))?></textarea><?=showFieldError('description_ressource')?></div>
+                
+                <!-- SECTION PREMIUM -->
+                <div class="form-group" style="grid-column: 1 / -1; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-top: 10px;">
+                    <label style="display:flex; align-items:center; gap: 10px; cursor:pointer; font-weight:bold; color:#d35400;">
+                        <input type="checkbox" name="est_premium" value="1" <?= ($editRessource && $editRessource['est_premium']) ? 'checked' : '' ?> style="width:20px; height:20px;">
+                        ✨ Ressource Premium
+                    </label>
+                    <p style="font-size:12px; color:#666; margin:5px 0 0 25px;">Si coché, cette ressource nécessitera des crédits pour être réservée.</p>
+                    
+                    <div style="margin-top:10px; margin-left:25px;">
+                        <label>Coût en crédits :</label>
+                        <input type="number" name="cout_credit" value="<?= $editRessource['cout_credit'] ?? 30 ?>" style="width:80px; padding:5px; border:1px solid #ddd; border-radius:4px;">
+                    </div>
+                </div>
+                <!-- FIN SECTION PREMIUM -->
+
                 <button type="submit" class="btn-submit"><?= $editModeRessource?'💾 Mettre à jour':'💾 Enregistrer' ?></button>
                 <?php if($editModeRessource): ?><a href="?tab=ressources<?= !empty($searchRessource)?'&search_ressource='.urlencode($searchRessource):'' ?><?= !empty($typeFilter)?'&type_ressource='.urlencode($typeFilter):'' ?><?= !empty($sortRessource)?'&sort_ressource='.$sortRessource:'' ?>" class="btn-cancel">Annuler</a><?php endif; ?>
             </form>
@@ -460,7 +690,6 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                 <?php if(!empty($ressources)): foreach($ressources as $r): 
                     $badge=$r['statut']==='Disponible'?'badge-success':($r['statut']==='Réservé'?'badge-warning':'badge-danger'); 
                     
-                    // Calcul des étoiles
                     $note = round($r['note_moyenne'] ?? 0, 1);
                     $etoiles = "";
                     for($i=1; $i<=5; $i++) {
@@ -468,7 +697,12 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                     }
                 ?> 
                 <tr>
-                    <td><strong><?=htmlspecialchars($r['nom'])?></strong></td>
+                    <td>
+                        <strong><?=htmlspecialchars($r['nom'])?></strong>
+                        <?php if($r['est_premium']): ?>
+                            <span style="background:linear-gradient(90deg, #f39c12, #e67e22); color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">PREMIUM</span>
+                        <?php endif; ?>
+                    </td>
                     <td><?=htmlspecialchars($r['type']??'-')?></td>
                     <td><?= (int)$r['quantite_disponible'] ?>/<?= (int)$r['quantite_totale'] ?></td>
                     <td><?=htmlspecialchars($r['etat']??'-')?></td>
@@ -494,32 +728,30 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
 <!-- MODALS -->
 <div class="modal-overlay" id="deleteModal"><div class="modal"><h4>⚠️ Supprimer ?</h4><p id="modalMessage"></p><div class="modal-buttons"><button class="modal-btn cancel" onclick="closeDeleteModal()">Annuler</button><a href="#" class="modal-btn confirm" id="confirmDeleteBtn" style="background:#ff4b4b;color:white;">Supprimer</a></div></div></div>
 <div class="modal-overlay" id="editModal"><div class="modal"><h4>✏️ Modifier</h4><p>Vos changements seront enregistrés.</p><div class="modal-buttons"><button class="modal-btn cancel" onclick="closeEditModal()">Annuler</button><a href="#" class="modal-btn confirm" id="confirmEditBtn">Continuer</a></div></div></div>
-
-
 <div class="modal-overlay" id="assocModal">
     <div class="modal">
         <h4>🔗 Associer une ressource</h4>
         <p id="assocEventTitle" style="margin-bottom:15px;color:#7b2ff7;font-weight:600;"></p>
-        
         <form method="POST" id="assocForm">
             <input type="hidden" name="action_associer" value="1">
             <input type="hidden" name="id_evenement" id="assocIdEvenement">
-            
             <div class="form-grid">
                 <div class="form-group">
                     <label>Ressource *</label>
-                    <select name="id_ressource" id="assocRessourceSelect" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <select name="id_ressource" id="assocRessourceSelect" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
                         <option value="">-- Sélectionner --</option>
-                        <?php foreach($ressourceController->listeRessources('','','') as $r): ?>
+                        <?php foreach($ressourceController->listeRessources('','','') as $r): 
+                            $premiumLabel = ($r['est_premium']) ? " [💎 Premium -{$r['cout_credit']}pts]" : "";
+                        ?>
                             <option value="<?= (int)$r['id_ressource'] ?>" data-qty="<?= (int)$r['quantite_disponible'] ?>">
-                                <?= htmlspecialchars($r['nom']) ?> (<?= htmlspecialchars($r['type']??'') ?>) - Qté: <?= (int)$r['quantite_disponible'] ?>
+                                <?= htmlspecialchars($r['nom']) ?> (<?= htmlspecialchars($r['type']??'') ?>) - Qté: <?= (int)$r['quantite_disponible'] ?> <?= $premiumLabel ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Quantité *</label>
-                    <input type="number" name="quantite_utilisee" id="assocQuantite" min="1" value="1" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <input type="number" name="quantite_utilisee" id="assocQuantite" min="1" value="1" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
                 </div>
                 <div class="form-group">
                     <label>Statut</label>
@@ -530,33 +762,31 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
                     </select>
                 </div>
             </div>
+            <div id="conflictAlert" style="display:none; background:#ffebee; color:#c62828; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #ffcdd2;">
+                <strong>⚠️ Conflit détecté !</strong>
+                <ul id="conflictList" style="margin:5px 0 0 20px; padding:0;"></ul>
+            </div>
             <div class="modal-buttons" style="margin-top:15px;">
                 <button type="button" class="modal-btn cancel" onclick="closeAssocModal()">Fermer</button>
-                <button type="submit" class="modal-btn confirm" style="background:#28a745;">✅ Associer</button>
+                <button type="submit" class="modal-btn confirm" id="btnAssocier" style="background:#28a745;">✅ Associer</button>
             </div>
         </form>
-
-        <!-- LISTE DES ASSOCIATIONS EXISTANTES -->
         <div class="assoc-list">
             <h4 style="margin:0 0 10px 0;color:#555;">📋 Déjà associées à cet événement</h4>
             <table id="assocTable"><thead><tr><th>Ressource</th><th>Type</th><th>Qté utilisée</th><th>Statut</th><th>Action</th></tr></thead><tbody id="assocTableBody"><tr><td colspan="5" style="text-align:center;color:#888;padding:15px;">Aucune ressource associée</td></tr></tbody></table>
         </div>
     </div>
 </div>
-
-<!-- MODAL DE FEEDBACK (NOUVEAU) -->
 <div class="modal-overlay" id="feedbackModal">
     <div class="modal" style="max-width: 500px;">
         <h4>📝 Noter cette ressource</h4>
         <p id="feedbackResourceName" style="font-weight:bold; color:#7b2ff7; margin-bottom: 20px;"></p>
-        
         <form method="POST">
             <input type="hidden" name="action_feedback" value="1">
             <input type="hidden" name="id_ressource" id="fbIdRessource">
-            
             <div class="form-group">
                 <label>Note :</label>
-                <select name="note" required style="font-size: 20px; padding: 5px;">
+                <select name="note" style="font-size: 20px; padding: 5px;">
                     <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
                     <option value="4">⭐⭐⭐⭐ (Très bien)</option>
                     <option value="3">⭐⭐⭐ (Correct)</option>
@@ -575,193 +805,121 @@ th{background:#f8f9fa;color:#555;font-weight:600;font-size:14px;}th a{color:#555
         </form>
     </div>
 </div>
-
-<!-- MODAL DES AVIS (NOUVEAU) -->
 <div class="modal-overlay" id="reviewsModal">
     <div class="modal" style="max-width: 600px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <h4 style="margin:0;">💬 Avis sur : <span id="reviewResourceName" style="color:#7b2ff7;"></span></h4>
             <button onclick="closeModal('reviewsModal')" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
         </div>
-        
         <div id="reviewsList" style="max-height: 400px; overflow-y: auto;">
-            <!-- Les avis seront injectés ici par JS -->
             <p style="text-align:center; color:#888;">Chargement...</p>
         </div>
     </div>
 </div>
 
 <script>
-// Données préchargées depuis PHP (associations)
 const assocData = <?= json_encode($allAssociations ?? []) ?>;
 let currentAssocEventId = null;
+let currentEventDebut = null;
+let currentEventFin = null;
 
-// clic sur associer 
-
-function openAssocModal(id, titre) {
+function openAssocModal(id, titre, debut, fin) {
     currentAssocEventId = id;
+    currentEventDebut = debut;
+    currentEventFin = fin;
     document.getElementById('assocIdEvenement').value = id;
     document.getElementById('assocEventTitle').textContent = 'Événement : ' + titre;
-    
-    // Filtrer le dropdown pour masquer les ressources déjà associées
-
+    document.getElementById('conflictAlert').style.display = 'none';
+    document.getElementById('btnAssocier').disabled = false;
+    document.getElementById('btnAssocier').style.background = '#28a745';
+    document.getElementById('conflictList').innerHTML = '';
     const alreadyIds = (assocData[id] || []).map(r => r.id_ressource);
     document.querySelectorAll('#assocRessourceSelect option').forEach(opt => {
         const val = parseInt(opt.value);
         opt.style.display = alreadyIds.includes(val) ? 'none' : '';
-        // Mettre à jour la quantité max si ressource sélectionnée
         if (opt.selected) updateQuantiteMax(opt.dataset.qty);
     });
-    
     renderAssocTable(id);
     document.getElementById('assocModal').classList.add('active');
 }
-
-function closeAssocModal() {
-    document.getElementById('assocModal').classList.remove('active');
-    currentAssocEventId = null;
-}
-
-//la table des assoiciations en bas 
-
+function closeAssocModal() { document.getElementById('assocModal').classList.remove('active'); currentAssocEventId = null; }
 function renderAssocTable(eventId) {
     const tbody = document.getElementById('assocTableBody');
     const data = assocData[eventId] || [];
-    
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:15px;">Aucune ressource associée</td></tr>';
-        return;
-    }
-    
+    if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;padding:15px;">Aucune ressource associée</td></tr>'; return; }
     let html = '';
     data.forEach(r => {
-       
-        const badge = r.statut_reservation === 'Confirmé' ? 'badge-success' : 
-                      (r.statut_reservation === 'Refusé' ? 'badge-danger' : 'badge-warning');
-        
-        // Construction de la ligne du tableau 
-        html += `<tr>
-            <td><strong>${r.nom}</strong></td>
-            <td>${r.type || '-'}</td>
-            <td>${r.quantite_utilisee}</td>
-            <td><span class="badge ${badge}">${r.statut_reservation}</span></td>
-            <td><a href="?action=dissocier&id_evenement=${eventId}&id_ressource=${r.id_ressource}" class="btn-delete" onclick="return confirm('Dissocier cette ressource de l\\'événement ?');">🗑️</a></td>
-        </tr>`;
+        const badge = r.statut_reservation === 'Confirmé' ? 'badge-success' : (r.statut_reservation === 'Refusé' ? 'badge-danger' : 'badge-warning');
+        html += `<tr><td><strong>${r.nom}</strong></td><td>${r.type || '-'}</td><td>${r.quantite_utilisee}</td><td><span class="badge ${badge}">${r.statut_reservation}</span></td><td><a href="?action=dissocier&id_evenement=${eventId}&id_ressource=${r.id_ressource}" class="btn-delete" onclick="return confirm('Dissocier ?');">🗑️</a></td></tr>`;
     });
     tbody.innerHTML = html;
 }
-
-
 <?php if($activeAssocEventId): 
     $eventTitre = '';
     foreach($events as $ev) { if($ev['id_evenement'] == $activeAssocEventId) { $eventTitre = $ev['titre']; break; } }
 ?>
-window.addEventListener('DOMContentLoaded', () => {
-    openAssocModal(<?= (int)$activeAssocEventId ?>, '<?= addslashes($eventTitre) ?>');
-});
+window.addEventListener('DOMContentLoaded', () => { openAssocModal(<?= (int)$activeAssocEventId ?>, '<?= addslashes($eventTitre) ?>', '', ''); });
 <?php endif; ?>
-
-// Mise à jour quantité max selon ressource sélectionnée
-document.getElementById('assocRessourceSelect')?.addEventListener('change', function() {
-    const opt = this.options[this.selectedIndex];
-    updateQuantiteMax(opt.dataset.qty || 0);
-});
-function updateQuantiteMax(qty) {
-    const input = document.getElementById('assocQuantite');
-    input.max = qty;
-    if (parseInt(input.value) > qty) input.value = qty;
-}
-
-// Modals existants
+document.getElementById('assocRessourceSelect')?.addEventListener('change', function() { const opt = this.options[this.selectedIndex]; updateQuantiteMax(opt.dataset.qty || 0); performConflictCheck(); });
+function updateQuantiteMax(qty) { const input = document.getElementById('assocQuantite'); input.max = qty; if (parseInt(input.value) > qty) input.value = qty; }
 let deleteUrl='';
 function openDeleteModal(url,type){
-    deleteUrl=url;
-    document.getElementById('modalMessage').textContent={'événement':'Voulez-vous vraiment supprimer cet événement ?','ressource':'Voulez-vous vraiment supprimer cette ressource ?'}[type]||'Confirmer ?';
-    document.getElementById('confirmDeleteBtn').href=url;
-    document.getElementById('deleteModal').classList.add('active');
+     deleteUrl=url; 
+     document.getElementById('modalMessage').textContent={'événement':'Voulez-vous vraiment supprimer cet événement ?',
+     'ressource':'Voulez-vous vraiment supprimer cette ressource ?'}
+     [type]||'Confirmer ?'; 
+     document.getElementById('confirmDeleteBtn').href=url; 
+     document.getElementById('deleteModal').classList.add('active'); 
+    }
+function closeDeleteModal(){ 
+    document.getElementById('deleteModal').classList.remove('active'); 
 }
-function closeDeleteModal(){
-    document.getElementById('deleteModal').classList.remove('active');
+function openEditModal(url){ 
+    document.getElementById('confirmEditBtn').href=url; 
+    document.getElementById('editModal').classList.add('active'); 
 }
-function openEditModal(url){
-    document.getElementById('confirmEditBtn').href=url;
-    document.getElementById('editModal').classList.add('active');
+function closeEditModal(){ 
+    document.getElementById('editModal').classList.remove('active'); 
 }
-function closeEditModal(){
-    document.getElementById('editModal').classList.remove('active');
-}
-
-// Gestion Modal Feedback
-function openFeedbackModal(id, nom) {
+function openFeedbackModal(id, nom) { 
     document.getElementById('fbIdRessource').value = id;
-    document.getElementById('feedbackResourceName').textContent = "Ressource : " + nom;
-    document.getElementById('feedbackModal').classList.add('active');
-}
-
-// Gestion Modal Reviews (Avis)
+     document.getElementById('feedbackResourceName').textContent = "Ressource : " + nom;
+      document.getElementById('feedbackModal').classList.add('active'); 
+    }
 function openReviewsModal(id, nom) {
-    document.getElementById('reviewResourceName').textContent = nom;
-    document.getElementById('reviewsList').innerHTML = '<p style="text-align:center;">Chargement...</p>';
-    document.getElementById('reviewsModal').classList.add('active');
-
-    // Appel AJAX pour récupérer les avis
-    fetch(`dashboard.php?action=get_reviews&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            const container = document.getElementById('reviewsList');
-            if (data.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">Aucun avis pour le moment. Soyez le premier !</p>';
-                return;
-            }
-
-            let html = '';
-            data.forEach(avis => {
-                // Génération des étoiles
-                let etoiles = '';
-                for(let i=1; i<=5; i++) {
-                    etoiles += (i <= avis.note) ? '⭐' : '☆';
-                }
-                
-                // Formatage de la date
-                const date = new Date(avis.date_feedback).toLocaleDateString('fr-FR');
-
-                html += `
-                <div style="border-bottom:1px solid #eee; padding:15px 0;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <strong>${etoiles}</strong>
-                        <small style="color:#888;">${date}</small>
-                    </div>
-                    <p style="margin:0; color:#555;">${avis.commentaire ? avis.commentaire : 'Pas de commentaire.'}</p>
-                </div>`;
-            });
-            container.innerHTML = html;
-        })
-        .catch(err => {
-            document.getElementById('reviewsList').innerHTML = '<p style="color:red;">Erreur de chargement.</p>';
-        });
-}
-
+     document.getElementById('reviewResourceName').textContent = nom; 
+     document.getElementById('reviewsList').innerHTML = '<p style="text-align:center;">Chargement...</p>'; 
+     document.getElementById('reviewsModal').classList.add('active'); fetch(`dashboard.php?action=get_reviews&id=${id}`).then(response => response.json()).then(data => { const container = document.getElementById('reviewsList'); if (data.length === 0) { container.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">Aucun avis pour le moment.</p>'; return; } let html = ''; data.forEach(avis => { let etoiles = ''; for(let i=1; i<=5; i++) { etoiles += (i <= avis.note) ? '⭐' : '☆'; } const date = new Date(avis.date_feedback).toLocaleDateString('fr-FR'); html += `<div style="border-bottom:1px solid #eee; padding:15px 0;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong>${etoiles}</strong><small style="color:#888;">${date}</small></div><p style="margin:0; color:#555;">${avis.commentaire ? avis.commentaire : 'Pas de commentaire.'}</p></div>`; }); container.innerHTML = html; }).catch(err => { document.getElementById('reviewsList').innerHTML = '<p style="color:red;">Erreur de chargement.</p>'; }); }
+function performConflictCheck() {
+     const resId = document.getElementById('assocRessourceSelect').value;
+      const eventId = document.getElementById('assocIdEvenement').value; 
+      const quantite = document.getElementById('assocQuantite').value || 1; const alertBox = document.getElementById('conflictAlert'); const btn = document.getElementById('btnAssocier'); if (!resId || !currentEventDebut || !currentEventFin) return; fetch(`dashboard.php?action=check_conflict&id_ressource=${resId}&debut=${currentEventDebut}&fin=${currentEventFin}&id_evenement=${eventId}&quantite=${quantite}`).then(response => response.json()).then(data => { if (data.conflits && data.conflits.length > 0) { alertBox.style.display = 'block'; btn.disabled = true; btn.style.background = '#ccc'; let listHtml = ''; data.conflits.forEach(c => { listHtml += `<li>${c.details || c.titre}</li>`; }); document.getElementById('conflictList').innerHTML = listHtml; } else { alertBox.style.display = 'none'; btn.disabled = false; btn.style.background = '#28a745'; } }).catch(err => console.error(err)); }
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
-}
+     document.getElementById(modalId).classList.remove('active'); 
+    }
+    
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m){
+    m.classList.remove('active');} }));
 
-document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m){m.classList.remove('active');} }));
 
-//lieu
 function toggleLieuInput() {
     const select = document.getElementById('lieu_select');
-    const input = document.getElementById('lieu_autre');
+    const inputAutre = document.getElementById('lieu_autre');
+    const inputLien = document.getElementById('lien_reunion');
+    
     if (select.value === 'autre') {
-        input.style.display = 'block';
-        input.required = true;
+        inputAutre.style.display = 'block';
+        inputLien.style.display = 'none';
+    } else if (select.value === 'En ligne') {
+        inputAutre.style.display = 'none';
+        inputLien.style.display = 'block';
     } else {
-        input.style.display = 'none';
-        input.required = false;
-        input.value = ''; // Reset value if switching back to En ligne
+        inputAutre.style.display = 'none';
+        inputLien.style.display = 'none';
     }
 }
-// Init affichage 
 document.addEventListener('DOMContentLoaded', toggleLieuInput);
 </script>
 </body>
 </html>
+```

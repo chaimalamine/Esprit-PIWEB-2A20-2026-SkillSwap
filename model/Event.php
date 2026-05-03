@@ -10,8 +10,9 @@ class Event {
     private $places_restantes;
     private $id_organisateur;
     private $statut;
+    private $lien_reunion; 
 
-    public function __construct ($titre = '', $description = '', $date_debut = '', $date_fin = '', $lieu = '', $capacite_max = 0, $places_restantes = 0, $id_organisateur = 0, $statut = 'Actif') {
+    public function __construct ($titre = '', $description = '', $date_debut = '', $date_fin = '', $lieu = '', $capacite_max = 0, $places_restantes = 0, $id_organisateur = 0, $statut = 'Actif', $lien_reunion = null) {
         $this->titre = $titre;
         $this->description = $description;
         $this->date_debut = $date_debut;
@@ -21,6 +22,7 @@ class Event {
         $this->places_restantes = $places_restantes;
         $this->id_organisateur = $id_organisateur;
         $this->statut = $statut;
+        $this->lien_reunion = $lien_reunion; 
     }
 
 
@@ -34,6 +36,7 @@ class Event {
     public function getIdOrganisateur() { return $this->id_organisateur; }
     public function getStatut() { return $this->statut; }
     public function getIdEvenement() { return $this->id_evenement; }
+    public function getLienReunion() { return $this->lien_reunion; } 
     
     public function setTitre($titre) { $this->titre = $titre; }
     public function setDescription($description) { $this->description = $description; }
@@ -43,5 +46,6 @@ class Event {
     public function setCapaciteMax($capacite_max) { $this->capacite_max = $capacite_max; }
     public function setPlacesRestantes($places_restantes) { $this->places_restantes = $places_restantes; }
     public function setStatut($statut) { $this->statut = $statut; }
+    public function setLienReunion($lien_reunion) { $this->lien_reunion = $lien_reunion; } 
 }
 ?>

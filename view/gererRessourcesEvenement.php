@@ -72,7 +72,7 @@ $ressourcesAssociees = $ressourcesAssociees ?? [];
                 <div class="form-row">
                     <div class="form-group">
                         <label for="id_ressource">Ressource :</label>
-                        <select name="id_ressource" id="id_ressource" required>
+                        <select name="id_ressource" id="id_ressource" >
                             <option value="">-- Sélectionner une ressource --</option>
                             <?php if (!empty($toutesRessources)): ?>
                                 <?php foreach ($toutesRessources as $r): 
@@ -99,7 +99,7 @@ $ressourcesAssociees = $ressourcesAssociees ?? [];
                     
                     <div class="form-group">
                         <label for="quantite_utilisee">Quantité utilisée :</label>
-                        <input type="number" name="quantite_utilisee" id="quantite_utilisee" min="1" value="1" required>
+                        <input type="number" name="quantite_utilisee" id="quantite_utilisee" min="1" value="1" >
                     </div>
                     
                     <div class="form-group">

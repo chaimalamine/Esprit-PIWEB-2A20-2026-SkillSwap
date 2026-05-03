@@ -32,11 +32,15 @@ class EventController {
              }
     }
 
-    // AJOUTER ÉVÉNEMENT
+    // AJOUTER ÉVÉNEMENT (AVEC CRÉDITS ET LIEN REUNION)
     public function addEvent($event) {
         $db = config::getConnexion(); 
         try {
-            $req = $db->prepare('INSERT INTO evenement (titre, description, date_debut, date_fin, lieu, capacite_max, places_restantes, id_organisateur, statut, date_creation, date_modification) VALUES (:titre, :description, :date_debut, :date_fin, :lieu, :capacite_max, :places_restantes, :id_organisateur, :statut, NOW(), NULL)');
+            // 1. Démarrer une transaction (sécurité)
+            $db->beginTransaction();
+
+            // 2. Insertion de l'événement (avec lien_reunion)
+            $req = $db->prepare('INSERT INTO evenement (titre, description, date_debut, date_fin, lieu, capacite_max, places_restantes, id_organisateur, statut, lien_reunion, date_creation, date_modification) VALUES (:titre, :description, :date_debut, :date_fin, :lieu, :capacite_max, :places_restantes, :id_organisateur, :statut, :lien_reunion, NOW(), NULL)');
             $req->execute([
                 'titre' => $event->getTitre(),
                  'description' => $event->getDescription(),
@@ -46,28 +50,46 @@ class EventController {
                 'capacite_max' => $event->getCapaciteMax(),
                 'places_restantes' => $event->getPlacesRestantes(),
                 'id_organisateur' => $event->getIdOrganisateur(), 
-                'statut' => $event->getStatut()
+                'statut' => $event->getStatut(),
+                'lien_reunion' => $event->getLienReunion() // NOUVEAU
             ]);
+
+            // 3. AJOUT DES 5 CRÉDITS À L'UTILISATEUR
+            $idOrganisateur = $event->getIdOrganisateur();
+            
+            if ($idOrganisateur) {
+                // ATTENTION : Vérifie que ta table s'appelle bien 'utilisateur' et la clé 'id_utilisateur'
+                $updateCredits = $db->prepare('UPDATE utilisateur SET credits = credits + 5 WHERE id_utilisateur = :id');
+                $updateCredits->execute([':id' => $idOrganisateur]);
+            }
+
+            // 4. Valider la transaction
+            $db->commit();
             return true;
+
         } catch (Exception $e) {
-             die('Erreur addEvent: ' . $e->getMessage());
-              }
+            // En cas d'erreur, on annule tout (rollback)
+            $db->rollBack();
+            die('Erreur addEvent: ' . $e->getMessage());
+        }
     }
 
-    // MODIFIER ÉVÉNEMENT 
+    // MODIFIER ÉVÉNEMENT (AVEC LIEN REUNION)
     public function updateEvent($event, $id) {
         $db = config::getConnexion(); 
         try {
-            $req = $db->prepare('UPDATE evenement SET titre = :titre, description = :description, date_debut = :date_debut, date_fin = :date_fin, lieu = :lieu, capacite_max = :capacite_max, places_restantes = :places_restantes, statut = :statut, date_modification = NOW() WHERE id_evenement = :id');
+            $req = $db->prepare('UPDATE evenement SET titre = :titre, description = :description, date_debut = :date_debut, date_fin = :date_fin, lieu = :lieu, capacite_max = :capacite_max, places_restantes = :places_restantes, statut = :statut, lien_reunion = :lien_reunion, date_modification = NOW() WHERE id_evenement = :id');
             $req->execute([
-                'id' => $id, 'titre' => $event->getTitre(), 
+                'id' => $id, 
+                'titre' => $event->getTitre(), 
                 'description' => $event->getDescription(),
                 'date_debut' => $event->getDateDebut(),
                  'date_fin' => $event->getDateFin(),
                 'lieu' => $event->getLieu(), 
                 'capacite_max' => $event->getCapaciteMax(),
                 'places_restantes' => $event->getPlacesRestantes(),
-                 'statut' => $event->getStatut()
+                 'statut' => $event->getStatut(),
+                 'lien_reunion' => $event->getLienReunion() // NOUVEAU
             ]);
             return true;
         } catch (Exception $e) { 
@@ -91,6 +113,7 @@ class EventController {
     public function getEvent($id) {
         $db = config::getConnexion();
         try {
+            // SELECT * récupère automatiquement la colonne lien_reunion
             $req = $db->prepare('SELECT * FROM evenement WHERE id_evenement = :id'); 
             $req->execute(['id' => $id]); 
             return $req->fetch();
