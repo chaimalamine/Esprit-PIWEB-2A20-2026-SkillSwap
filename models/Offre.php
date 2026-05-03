@@ -11,6 +11,8 @@ class Offre
     private string $dateFin;
     private float $recompenseParrain;
     private int $invitationsRequises;
+    private int $totalInscriptionsLiees;
+    private int $totalParrainagesLies;
 
     public function __construct(
         int $idOffre = 0,
@@ -21,7 +23,9 @@ class Offre
         string $dateDebut = '',
         string $dateFin = '',
         float $recompenseParrain = 0,
-        int $invitationsRequises = 0
+        int $invitationsRequises = 0,
+        int $totalInscriptionsLiees = 0,
+        int $totalParrainagesLies = 0
     ) {
         $this->idOffre = $idOffre;
         $this->titre = $titre;
@@ -32,6 +36,8 @@ class Offre
         $this->dateFin = $dateFin;
         $this->recompenseParrain = $recompenseParrain;
         $this->invitationsRequises = $invitationsRequises;
+        $this->totalInscriptionsLiees = $totalInscriptionsLiees;
+        $this->totalParrainagesLies = $totalParrainagesLies;
     }
 
     public function getIdOffre(): int
@@ -122,5 +128,25 @@ class Offre
     public function setInvitationsRequises(int $invitationsRequises): void
     {
         $this->invitationsRequises = $invitationsRequises;
+    }
+
+    public function getTotalInscriptionsLiees(): int
+    {
+        return $this->totalInscriptionsLiees;
+    }
+
+    public function setTotalInscriptionsLiees(int $totalInscriptionsLiees): void
+    {
+        $this->totalInscriptionsLiees = $totalInscriptionsLiees;
+    }
+
+    public function getTotalParrainagesLies(): int
+    {
+        return $this->totalParrainagesLies;
+    }
+
+    public function setTotalParrainagesLies(int $totalParrainagesLies): void
+    {
+        $this->totalParrainagesLies = $totalParrainagesLies;
     }
 }

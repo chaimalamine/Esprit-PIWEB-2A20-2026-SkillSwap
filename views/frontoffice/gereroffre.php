@@ -14,10 +14,10 @@ foreach ($offres as $index => $offre) {
     ];
 }
 ?>
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Parrainage</title>
 
 <style>
@@ -57,19 +57,6 @@ background:rgba(255,255,255,0.92);padding:22px;margin:14px 0;border-radius:22px;
 box-shadow:0 16px 36px rgba(31,41,55,0.08);border:1px solid #ede9fe;
 }
 
-.stats-wheel-box{
-background:rgba(255,255,255,0.92);
-padding:22px;
-margin:18px 0;
-border-radius:22px;
-box-shadow:0 16px 36px rgba(31,41,55,0.08);
-border:1px solid #ede9fe;
-display:flex;
-gap:20px;
-align-items:center;
-flex-wrap:wrap;
-}
-
 .credits-box{
 background:linear-gradient(135deg,#ffffff,#f6f0ff);
 padding:18px;
@@ -86,75 +73,49 @@ color:#7b2ff7;
 margin-top:5px;
 }
 
-.stats-wheel{
-width:220px;
-height:220px;
-flex:0 0 220px;
-position:relative;
-display:flex;
-align-items:center;
-justify-content:center;
+.notifications-box{
+background:rgba(255,255,255,0.92);
+padding:18px;
+margin:18px 0;
+border-radius:22px;
+box-shadow:0 16px 36px rgba(31,41,55,0.08);
+border:1px solid #ede9fe;
 }
 
-.stats-wheel canvas{
-width:220px;
-height:220px;
+.notification-item{
+padding:12px 14px;
+border-radius:14px;
+margin:10px 0;
+font-weight:600;
 }
 
-.stats-wheel-center{
-position:absolute;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-z-index:1;
+.notification-item.info{
+background:#eff6ff;
+color:#1d4ed8;
+border:1px solid #bfdbfe;
+}
+
+.notification-item.success{
+background:#f0fdf4;
+color:#166534;
+border:1px solid #bbf7d0;
+}
+
+.notification-item.warning{
+background:#fff7ed;
+color:#9a3412;
+border:1px solid #fdba74;
+}
+
+.msg{
 text-align:center;
-font-size:14px;
-color:#4b5563;
-pointer-events:none;
-}
-
-.stats-wheel-center strong{
-font-size:24px;
-color:#7b2ff7;
-}
-
-.stats-legend{
-flex:1;
-min-width:260px;
-}
-
-.stats-legend-item{
-display:flex;
-align-items:center;
-justify-content:space-between;
-gap:10px;
-padding:10px 0;
-border-bottom:1px solid #f0e9ff;
-}
-
-.stats-legend-item:last-child{
-border-bottom:none;
-}
-
-.stats-percent{
-font-size:12px;
-color:#6b7280;
-margin-left:6px;
-}
-
-.stats-legend-left{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.stats-color{
-width:14px;
-height:14px;
-border-radius:50%;
-display:inline-block;
+margin:18px 0;
+font-weight:bold;
+padding:12px;
+border-radius:14px;
+background:#f0fdf4;
+color:#166534;
+border:1px solid #bbf7d0;
 }
 
 .participants{
@@ -172,6 +133,37 @@ border-radius:14px;
 
 .timer-info div{
 margin-bottom:4px;
+}
+
+.progress-box{
+margin:12px 0 14px;
+padding:12px 14px;
+border-radius:14px;
+background:#f5f3ff;
+border:1px solid #ddd6fe;
+}
+
+.progress-box strong{
+color:#5b21b6;
+}
+
+.status-badge{
+display:inline-block;
+margin-top:8px;
+padding:6px 10px;
+border-radius:999px;
+font-size:13px;
+font-weight:700;
+}
+
+.status-badge.en-cours{
+background:#ede9fe;
+color:#6d28d9;
+}
+
+.status-badge.objectif-atteint{
+background:#dcfce7;
+color:#166534;
 }
 
 .participants-label{
@@ -209,7 +201,8 @@ background:#fff;
 </style>
 
 <script>
-const wheelOffers = <?= json_encode($offresRoue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const appBaseUrl = <?= json_encode(APP_BASE_URL, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const currentOriginBase = window.location.origin + "/parrainage-project";
 
 function search(){
     let k = document.getElementById("search").value.toLowerCase();
@@ -220,32 +213,93 @@ function search(){
         cards[i].innerText.toLowerCase().includes(k) ? "block":"none";
     }
 
-    renderWheel();
 }
 
 function participer(code){
-let link="http://localhost/parrainage-project/index.php?page=inscription&ref="+code;
+var xhr = new XMLHttpRequest();
+xhr.open("GET", currentOriginBase + "/index.php?page=frontoffice&action=participer&code=" + encodeURIComponent(code), true);
+xhr.onreadystatechange = function() {
+    var data;
 
-let popup=`
-<div id="popup" style="
-position:fixed;top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;
-">
+    if (xhr.readyState !== 4) {
+        return;
+    }
 
-<div style="background:white;padding:20px;border-radius:10px;width:350px;text-align:center;">
+    try {
+        data = JSON.parse(xhr.responseText);
+    } catch (e) {
+        alert("Reponse invalide du serveur.");
+        return;
+    }
 
-<h3>Lien de parrainage</h3>
+    if (xhr.status < 200 || xhr.status >= 300) {
+        alert(data.message || "Participation impossible.");
+        return;
+    }
 
-<input id="refLink" value="${link}" readonly style="width:100%;padding:8px;"><br><br>
+        let link = data.link;
+        let qrLink = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(link);
+        let qrLinkFallback = "https://quickchart.io/qr?size=220&text=" + encodeURIComponent(link);
 
-<button onclick="copy()">Copier</button>
-<button onclick="closePopup()">Fermer</button>
+        let popup=`
+        <div id="popup" style="
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;
+        ">
 
-</div>
-</div>
-`;
+        <div style="background:white;padding:20px;border-radius:10px;width:360px;text-align:center;">
 
-document.body.insertAdjacentHTML("beforeend",popup);
+        <h3>Lien de parrainage</h3>
+        <p style="color:#4b5563;font-size:14px;margin-bottom:14px;">${data.message}</p>
+
+        <input id="refLink" value="${link}" readonly style="width:100%;padding:8px;"><br><br>
+
+        <img id="popupQrImage" src="${qrLink}" alt="QR Code parrainage" style="width:220px;height:220px;border-radius:12px;border:1px solid #e5e7eb;object-fit:cover;"><br><br>
+
+        <div id="qrFallback" style="display:none;margin:12px 0;padding:10px 12px;background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;color:#991b1b;font-size:13px;">
+        Le service du QR code n'a pas charge. Le lien ci-dessus reste utilisable.
+        </div>
+
+        <a href="${link}" target="_blank" style="display:inline-block;margin-bottom:10px;color:#7b2ff7;text-decoration:none;font-weight:600;">
+        Ouvrir la page d'inscription
+        </a><br>
+
+        <button onclick="copy()">Copier</button>
+        <button onclick="closePopup()">Fermer</button>
+
+        </div>
+        </div>
+        `;
+
+        document.body.insertAdjacentHTML("beforeend",popup);
+        prepareQrFallback(qrLinkFallback);
+};
+xhr.onerror = function() {
+    alert("Le serveur ne repond pas pour la participation.");
+};
+xhr.send(null);
+}
+
+function prepareQrFallback(qrLinkFallback){
+var qrImage = document.getElementById("popupQrImage");
+var qrFallback = document.getElementById("qrFallback");
+
+if (!qrImage) {
+    return;
+}
+
+qrImage.onerror = function() {
+    if (qrImage.getAttribute("data-fallback-used") === "1") {
+        qrImage.style.display = "none";
+        if (qrFallback) {
+            qrFallback.style.display = "block";
+        }
+        return;
+    }
+
+    qrImage.setAttribute("data-fallback-used", "1");
+    qrImage.src = qrLinkFallback;
+};
 }
 
 function copy(){
@@ -263,95 +317,8 @@ function detail(t,d){
 alert("Titre: "+t+"\n\nDescription: "+d);
 }
 
-function getVisibleWheelData() {
-    let cards = Array.from(document.getElementsByClassName("offer-card"));
-    let visibleTitles = cards
-        .filter(card => card.style.display !== "none")
-        .map(card => card.dataset.titre);
-
-    return wheelOffers.filter(item =>
-        visibleTitles.includes(item.titre) && Number(item.participants) > 0
-    );
-}
-
-function drawDonut(progress = 1) {
-    let canvas = document.getElementById("statsWheelCanvas");
-    let ctx = canvas.getContext("2d");
-    let data = getVisibleWheelData();
-    let total = data.reduce((sum, item) => sum + Number(item.participants), 0);
-    let size = 220;
-    let center = size / 2;
-    let radius = 92;
-    let lineWidth = 34;
-
-    ctx.clearRect(0, 0, size, size);
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = "butt";
-
-    ctx.beginPath();
-    ctx.strokeStyle = "#e9d5ff";
-    ctx.arc(center, center, radius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    document.getElementById("wheelTotal").textContent = total;
-
-    if (total <= 0) {
-        document.getElementById("wheelLegend").innerHTML = "<h3>Roulette des offres</h3><p>Aucune participation pour le moment.</p>";
-        return;
-    }
-
-    let startAngle = -Math.PI / 2;
-    for (let i = 0; i < data.length; i++) {
-        let item = data[i];
-        let fullSlice = (Number(item.participants) / total) * Math.PI * 2;
-        let visibleSlice = fullSlice * progress;
-
-        ctx.beginPath();
-        ctx.strokeStyle = item.couleur;
-        ctx.arc(center, center, radius, startAngle, startAngle + visibleSlice);
-        ctx.stroke();
-
-        startAngle += fullSlice;
-    }
-
-    let legend = "<h3>Roulette des offres</h3>";
-    for (let i = 0; i < data.length; i++) {
-        let item = data[i];
-        let percent = ((Number(item.participants) / total) * 100).toFixed(1);
-        legend += `
-        <div class="stats-legend-item">
-            <div class="stats-legend-left">
-                <span class="stats-color" style="background:${item.couleur};"></span>
-                <span>${item.titre}<span class="stats-percent">${percent}%</span></span>
-            </div>
-            <strong>${item.participants}</strong>
-        </div>`;
-    }
-    document.getElementById("wheelLegend").innerHTML = legend;
-}
-
-function renderWheel() {
-    let start = null;
-
-    function animate(timestamp) {
-        if (!start) {
-            start = timestamp;
-        }
-
-        let progress = Math.min((timestamp - start) / 700, 1);
-        drawDonut(progress);
-
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        }
-    }
-
-    requestAnimationFrame(animate);
-}
-
 window.onload = function () {
-    document.getElementById("search").addEventListener("input", search);
-    renderWheel();
+    document.getElementById("search").onkeyup = search;
 }
 </script>
 
@@ -383,22 +350,22 @@ window.onload = function () {
 </div>
 <?php endif; ?>
 
-<div class="stats-wheel-box">
-<div class="stats-wheel">
-<canvas id="statsWheelCanvas" width="220" height="220"></canvas>
-<div class="stats-wheel-center">
-<span>Total</span>
-<strong id="wheelTotal">0</strong>
-<span>participants</span>
-</div>
-</div>
+<?php if (!empty($flashSuccess)): ?>
+<div class="msg"><?= htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
 
-<div class="stats-legend" id="wheelLegend">
-<h3>Roulette des offres</h3>
+<?php if (!empty($notifications)): ?>
+<div class="notifications-box">
+<h3>Notifications</h3>
+<?php foreach ($notifications as $notification): ?>
+<div class="notification-item <?= htmlspecialchars($notification['type'], ENT_QUOTES, 'UTF-8') ?>">
+<?= htmlspecialchars($notification['message'], ENT_QUOTES, 'UTF-8') ?>
 </div>
+<?php endforeach; ?>
 </div>
+<?php endif; ?>
 
-<input id="search" placeholder="Rechercher">
+<input id="search" name="search">
 <button onclick="search()">Chercher</button>
 
 <?php
@@ -406,6 +373,7 @@ $maxParticipants = max(1, (int) ($statistiques['maxParticipants'] ?? 0));
 foreach ($offres as $o):
     $pourcentageParticipation = min(100, (int) round(($o->getParticipants() / $maxParticipants) * 100));
     $codeOffre = $o->getCodeParrainUnique() !== '' ? $o->getCodeParrainUnique() : ('OFFRE' . $o->getIdOffre());
+    $progression = $progressionsOffres[$codeOffre] ?? null;
     $dateFinAffichee = 'Non definie';
     $tempsRestant = 'Aucun timer';
 
@@ -437,6 +405,19 @@ foreach ($offres as $o):
 <div><b>Date de fin :</b> <?= htmlspecialchars($dateFinAffichee, ENT_QUOTES, 'UTF-8') ?></div>
 <div><b>Temps restant :</b> <?= htmlspecialchars($tempsRestant, ENT_QUOTES, 'UTF-8') ?></div>
 </div>
+
+<?php if ($progression !== null): ?>
+<div class="progress-box">
+<div><strong>Mes invitations pour cette offre :</strong> <?= (int) $progression['invitations'] ?> / <?= (int) $progression['invitations_requises'] ?></div>
+<div><strong>Credits a gagner :</strong> <?= (int) $progression['credits_a_gagner'] ?></div>
+<div>
+<strong>Statut :</strong>
+<span class="status-badge <?= $progression['objectif_atteint'] ? 'objectif-atteint' : 'en-cours' ?>">
+<?= htmlspecialchars($progression['statut'], ENT_QUOTES, 'UTF-8') ?>
+</span>
+</div>
+</div>
+<?php endif; ?>
 
 <div class="participants">
 <div class="participants-label">

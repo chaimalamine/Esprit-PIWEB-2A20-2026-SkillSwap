@@ -4,10 +4,10 @@ if (!isset($offres)) {
     exit;
 }
 ?>
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Dashboard</title>
 
 <style>
@@ -103,23 +103,15 @@ button:hover{
 function showParrainage(){
 document.getElementById("dashboard").style.display="none";
 document.getElementById("parrainage").style.display="block";
-localStorage.setItem("page","parrainage");
 }
 
 function showDashboard(){
 document.getElementById("dashboard").style.display="block";
 document.getElementById("parrainage").style.display="none";
-localStorage.setItem("page","dashboard");
 }
 
 window.onload = function(){
-let page = localStorage.getItem("page");
-
-if(page === "parrainage"){
-    showParrainage();
-}else{
-    showDashboard();
-}
+showDashboard();
 }
 
 function detail(t,d){
@@ -157,7 +149,8 @@ alert("Titre: "+t+"\n\nDescription: "+d);
 
 <form method="GET" action="index.php">
 <input type="hidden" name="page" value="backoffice">
-<input name="search" placeholder="Rechercher" value="<?= htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8') ?>">
+<label for="search">Recherche</label>
+<input id="search" name="search" value="<?= htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8') ?>">
 <button type="submit">Rechercher</button>
 </form>
 
@@ -167,14 +160,37 @@ alert("Titre: "+t+"\n\nDescription: "+d);
 
 <form method="POST" action="index.php?page=backoffice">
 <input type="hidden" name="action" value="store">
-<input name="titre" placeholder="Titre">
-<textarea name="description" placeholder="Description"></textarea>
-<input type="number" step="0.01" min="0" name="recompense" placeholder="Nombre de credits gratuits" required>
-<input type="number" min="1" name="invitations_requises" placeholder="Nombre des invitations" required>
+<label for="titre">Titre</label>
+<input id="titre" type="text" name="titre">
+<label for="description">Description</label>
+<textarea id="description" name="description"></textarea>
+<label for="recompense">Nombre de credits gratuits</label>
+<input id="recompense" type="text" name="recompense">
+<label for="invitations_requises">Nombre des invitations</label>
+<input id="invitations_requises" type="text" name="invitations_requises">
 <label for="date_fin">Date de fin du timer</label>
-<input id="date_fin" type="date" name="date_fin" min="<?= date('Y-m-d') ?>" required>
+<input id="date_fin" type="text" name="date_fin" value="<?= date('Y-m-d') ?>">
 <button type="submit">Creer</button>
 </form>
+
+<?php if (!empty($utilisateursEnAttente)): ?>
+<h3>Inscriptions en attente</h3>
+<?php foreach ($utilisateursEnAttente as $user): ?>
+<div class="box">
+<b><?= htmlspecialchars($user['nom'] . ' ' . $user['prenom'], ENT_QUOTES, 'UTF-8') ?></b><br>
+<small>Email : <?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></small><br>
+<small>Parrain : <?= htmlspecialchars($user['parraine_par'] !== '' ? $user['parraine_par'] : 'Aucun', ENT_QUOTES, 'UTF-8') ?></small><br>
+<small>Offre : <?= htmlspecialchars($user['offre_code'] !== '' ? $user['offre_code'] : 'Aucune', ENT_QUOTES, 'UTF-8') ?></small><br>
+<small>Date inscription : <?= htmlspecialchars($user['date_inscription'], ENT_QUOTES, 'UTF-8') ?></small><br>
+<form method="GET" action="index.php">
+<input type="hidden" name="page" value="backoffice">
+<input type="hidden" name="action" value="validate_user">
+<input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
+<button type="submit">Valider</button>
+</form>
+</div>
+<?php endforeach; ?>
+<?php endif; ?>
 
 <?php foreach ($offres as $o): ?>
 
@@ -184,6 +200,8 @@ alert("Titre: "+t+"\n\nDescription: "+d);
 <?= nl2br(htmlspecialchars($o->getDescription(), ENT_QUOTES, 'UTF-8')) ?><br><br>
 <small>Credits gratuits : <?= (int) $o->getRecompenseParrain() ?></small><br>
 <small>Invitations requises : <?= (int) $o->getInvitationsRequises() ?></small><br>
+<small>Inscriptions liees au parrainage : <?= (int) $o->getTotalInscriptionsLiees() ?></small><br>
+<small>Parrainages effectifs : <?= (int) $o->getTotalParrainagesLies() ?></small><br>
 <small>
 Timer :
 <?= htmlspecialchars($o->getDateFin() !== '' && $o->getDateFin() !== '0000-00-00' ? $o->getDateFin() : 'Non defini', ENT_QUOTES, 'UTF-8') ?>

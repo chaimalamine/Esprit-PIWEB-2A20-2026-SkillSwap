@@ -30,6 +30,10 @@ switch ($page) {
             supprimerOffre($conn);
         }
 
+        if ($action === 'validate_user') {
+            validerUtilisateurInvite($conn, (int) ($_GET['id'] ?? $_POST['id'] ?? 0));
+        }
+
         afficherBackoffice($conn);
         break;
 
@@ -44,6 +48,10 @@ switch ($page) {
 
     case 'frontoffice':
     default:
+        if ($action === 'participer') {
+            participerOffreUtilisateurActuel($conn, trim($_GET['code'] ?? ''));
+        }
+
         afficherFrontoffice($conn);
         break;
 }

@@ -1,5 +1,7 @@
 <?php
 
+const APP_BASE_URL = 'http://192.168.1.153/parrainage-project';
+
 function getConnection(): PDO
 {
     static $conn = null;

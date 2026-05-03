@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../models/Offre.php';
+require_once __DIR__ . '/../controllers/UserController.php';
 
 function creerObjetOffre(array $data): Offre
 {
@@ -13,8 +14,22 @@ function creerObjetOffre(array $data): Offre
         (string) ($data['date_debut'] ?? ''),
         (string) ($data['date_fin'] ?? ''),
         (float) ($data['recompense_parrain'] ?? 0),
-        (int) ($data['invitations_requises'] ?? 0)
+        (int) ($data['invitations_requises'] ?? 0),
+        (int) ($data['total_inscriptions_liees'] ?? 0),
+        (int) ($data['total_parrainages_lies'] ?? 0)
     );
+}
+
+function getSelectOffresAvecJointure(): string
+{
+    return "
+        SELECT
+            o.*,
+            COUNT(g.code_parrain_unique) AS total_inscriptions_liees,
+            SUM(CASE WHEN g.parraine_par IS NOT NULL AND g.parraine_par <> '' THEN 1 ELSE 0 END) AS total_parrainages_lies
+        FROM offre o
+        LEFT JOIN g_offre g ON o.code_offre = g.offre_code
+    ";
 }
 
 function synchroniserCodesOffres(PDO $conn): void
@@ -22,10 +37,30 @@ function synchroniserCodesOffres(PDO $conn): void
     $conn->exec("UPDATE offre SET code_offre = CONCAT('OFFRE', id_offre) WHERE code_offre IS NULL OR code_offre = ''");
 }
 
+function supprimerOffresExpirees(PDO $conn): void
+{
+    $stmt = $conn->prepare(
+        "DELETE FROM offre
+         WHERE date_fin IS NOT NULL
+         AND date_fin <> ''
+         AND date_fin <> '0000-00-00'
+         AND date_fin < ?"
+    );
+    $stmt->execute([date('Y-m-d')]);
+}
+
 function recupererToutesLesOffres(PDO $conn): array
 {
+    supprimerOffresExpirees($conn);
     synchroniserCodesOffres($conn);
-    $stmt = $conn->query('SELECT * FROM offre ORDER BY id_offre DESC');
+    $stmt = $conn->query(
+        getSelectOffresAvecJointure() . '
+        GROUP BY
+            o.id_offre, o.code_offre, o.titre, o.description, o.recompense_parrain,
+            o.recompense_filleul, o.invitations_requises, o.date_debut, o.date_fin,
+            o.statut, o.participants
+        ORDER BY o.id_offre DESC'
+    );
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $offres = [];
 
@@ -38,9 +73,16 @@ function recupererToutesLesOffres(PDO $conn): array
 
 function rechercherOffres(PDO $conn, string $motCle): array
 {
+    supprimerOffresExpirees($conn);
     synchroniserCodesOffres($conn);
     $stmt = $conn->prepare(
-        'SELECT * FROM offre WHERE titre LIKE ? OR description LIKE ? ORDER BY id_offre DESC'
+        getSelectOffresAvecJointure() . '
+        WHERE o.titre LIKE ? OR o.description LIKE ?
+        GROUP BY
+            o.id_offre, o.code_offre, o.titre, o.description, o.recompense_parrain,
+            o.recompense_filleul, o.invitations_requises, o.date_debut, o.date_fin,
+            o.statut, o.participants
+        ORDER BY o.id_offre DESC'
     );
     $like = '%' . $motCle . '%';
     $stmt->execute([$like, $like]);
@@ -159,6 +201,7 @@ function construirePdfSimple(array $pages): string
 
 function exporterOffresPdf(PDO $conn): void
 {
+    supprimerOffresExpirees($conn);
     $search = trim($_GET['search'] ?? '');
     $offres = $search !== '' ? rechercherOffres($conn, $search) : recupererToutesLesOffres($conn);
 
@@ -286,10 +329,84 @@ function calculerStatistiquesOffres(array $offres): array
     ];
 }
 
+function calculerProgressionUtilisateurOffres(PDO $conn, array $offres, ?array $utilisateurActuel): array
+{
+    if ($utilisateurActuel === null) {
+        return [];
+    }
+
+    $codeUser = trim((string) ($utilisateurActuel['code_parrain_unique'] ?? ''));
+
+    if ($codeUser === '') {
+        return [];
+    }
+
+    $progressions = [];
+
+    foreach ($offres as $offre) {
+        $codeOffre = $offre->getCodeParrainUnique();
+        $invitationsRequises = $offre->getInvitationsRequises();
+        $invitations = 0;
+        $objectifAtteint = false;
+
+        if ($codeOffre !== '') {
+            $invitations = compterInvitationsParrain($conn, $codeUser, $codeOffre);
+            $objectifAtteint = $invitationsRequises > 0 && $invitations >= $invitationsRequises;
+        }
+
+        $progressions[$codeOffre] = [
+            'invitations' => $invitations,
+            'invitations_requises' => $invitationsRequises,
+            'credits_a_gagner' => (int) round($offre->getRecompenseParrain()),
+            'statut' => $objectifAtteint ? 'objectif atteint' : 'en cours',
+            'objectif_atteint' => $objectifAtteint,
+        ];
+    }
+
+    return $progressions;
+}
+
+function verifierNotificationsOffresExpirees(PDO $conn, ?array $utilisateurActuel): void
+{
+    if ($utilisateurActuel === null) {
+        return;
+    }
+
+    $offreCode = trim((string) ($utilisateurActuel['offre_code'] ?? ''));
+
+    if ($offreCode === '') {
+        return;
+    }
+
+    $offre = rechercherOffreParCode($conn, $offreCode);
+
+    if ($offre === null) {
+        return;
+    }
+
+    $dateFin = trim((string) ($offre['date_fin'] ?? ''));
+
+    if ($dateFin === '' || $dateFin === '0000-00-00') {
+        return;
+    }
+
+    if ($dateFin < date('Y-m-d')) {
+        ajouterNotification(
+            $conn,
+            (string) $utilisateurActuel['code_parrain_unique'],
+            'Offre expiree : ' . (string) ($offre['titre'] ?? $offreCode) . '.',
+            'warning',
+            'offre_expiree',
+            $offreCode
+        );
+    }
+}
+
 function afficherBackoffice(PDO $conn): void
 {
     $search = trim($_GET['search'] ?? '');
     $offres = $search !== '' ? rechercherOffres($conn, $search) : recupererToutesLesOffres($conn);
+    $utilisateursEnAttente = recupererUtilisateursEnAttente($conn);
 
     require __DIR__ . '/../views/backoffice/parrainage.php';
 }
@@ -298,9 +415,17 @@ function afficherFrontoffice(PDO $conn): void
 {
     $offres = recupererToutesLesOffres($conn);
     $statistiques = calculerStatistiquesOffres($offres);
+    $flashSuccess = $_SESSION['flash_success'] ?? '';
+    unset($_SESSION['flash_success']);
     $utilisateurActuel = function_exists('recupererInfosUtilisateurActuel')
         ? recupererInfosUtilisateurActuel($conn)
         : null;
+    verifierNotificationsOffresExpirees($conn, $utilisateurActuel);
+    $utilisateurActuel = function_exists('recupererInfosUtilisateurActuel')
+        ? recupererInfosUtilisateurActuel($conn)
+        : null;
+    $notifications = $utilisateurActuel['notifications'] ?? [];
+    $progressionsOffres = calculerProgressionUtilisateurOffres($conn, $offres, $utilisateurActuel);
 
     require __DIR__ . '/../views/frontoffice/gereroffre.php';
 }
