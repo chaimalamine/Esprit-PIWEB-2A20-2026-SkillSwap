@@ -33,6 +33,10 @@
         .auth-footer { text-align: center; margin-top: 25px; font-size: 14px; color: #666; }
         .auth-footer a { color: #7b2ff7; text-decoration: none; font-weight: 600; }
         .auth-footer a:hover { text-decoration: underline; }
+        /* ===== AJOUT POUR MOT DE PASSE OUBLIE ===== */
+        .forgot-password-link { text-align: center; margin-top: 15px; font-size: 13px; }
+        .forgot-password-link a { color: #a855f7; text-decoration: none; }
+        .forgot-password-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -57,6 +61,11 @@
             <?php if(isset($_SESSION['erreur'])): ?>
                 <div class="error-message"><?php echo $_SESSION['erreur']; unset($_SESSION['erreur']); ?></div>
             <?php endif; ?>
+            
+            <!-- ===== AJOUT POUR MOT DE PASSE OUBLIE : message de succès après réinitialisation ===== -->
+            <?php if(isset($_SESSION['reset_success'])): ?>
+                <div class="success-message"><?php echo $_SESSION['reset_success']; unset($_SESSION['reset_success']); ?></div>
+            <?php endif; ?>
 
             <form action="http://localhost/projetwebfinal/controllers/UserC.php?action=login" method="POST" id="loginForm">
                 <div class="form-group">
@@ -73,6 +82,11 @@
 
                 <button type="submit" class="btn-submit" id="submitBtn" disabled>Se connecter</button>
             </form>
+
+            <!-- ===== AJOUT POUR MOT DE PASSE OUBLIE : lien vers formulaire ===== -->
+            <div class="forgot-password-link">
+                <a href="mot_de_passe_oublie.php">Mot de passe oublié ?</a>
+            </div>
 
             <div class="auth-footer">
                 Pas encore de compte ? <a href="inscription.php">S'inscrire</a>
