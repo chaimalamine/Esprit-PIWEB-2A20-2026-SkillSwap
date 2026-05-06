@@ -70,8 +70,8 @@ if (isset($_GET['action'])) {
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = 'eyettechouikhha@gmail.com'; // À remplacer par ton email
-            $mail->Password = 'cmkn mqiq dmse gdmg'; // À remplacer par ton mot de passe d'application
+            $mail->Username = 'eyettechouikhha@gmail.com'; 
+            $mail->Password = 'cmkn mqiq dmse gdmg';
             $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->setFrom('eyettechouikhha@gmail.com', 'SkillSwap');
