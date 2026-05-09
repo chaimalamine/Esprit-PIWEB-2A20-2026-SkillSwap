@@ -34,6 +34,7 @@ if(!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
     <a href="design.php">Dashboard</a>
     <a href="liste_users.php">Liste des utilisateurs</a>
     <a href="mes_competences.php">Mes Compétences</a>
+    <a href="liste_parrainages.php">🤝 Parrainages</a>
     <a href="#">Offres</a>
     <a href="#">Messages</a>
     <a href="profil.php">Profil</a>

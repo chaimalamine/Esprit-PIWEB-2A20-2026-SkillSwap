@@ -13,7 +13,7 @@ if(isset($_SESSION['user_id'])) {
 
 $page = isset($_GET['page']) ? $_GET['page'] : 'accueil';
 
-if (in_array($page, array('profil', 'competences', 'modifier'))) {
+if (in_array($page, array('profil', 'competences', 'modifier', 'parrainage'))) {
     if (!isset($_SESSION['user_id'])) {
         header('Location: connexion.php');
         exit();
@@ -90,6 +90,7 @@ if (in_array($page, array('profil', 'competences', 'modifier'))) {
         <a href="#">Explorer</a>
         <a href="#">Proposer</a>
         <?php if(isset($_SESSION['user_id'])): ?>
+            <a href="frontdessign.php?page=parrainage">🤝 Parrainage</a>
             <a href="frontdessign.php?page=profil" id="com">Mon Profil</a>
         <?php else: ?>
             <a href="connexion.php" id="com">Commencer</a>
@@ -114,6 +115,7 @@ if (in_array($page, array('profil', 'competences', 'modifier'))) {
             <div class="separator"></div>
             <a href="frontdessign.php?page=profil" class="btn-sidebar btn-profil">👤 Mon Profil</a>
             <a href="frontdessign.php?page=competences" class="btn-sidebar btn-profil">📚 Mes Compétences</a>
+            <a href="frontdessign.php?page=parrainage" class="btn-sidebar btn-profil">🤝 Parrainage</a>
             <?php if(isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
                 <a href="../backoffice/design.php" class="btn-sidebar btn-dashboard">⚙️ Dashboard</a>
             <?php endif; ?>
@@ -139,6 +141,9 @@ if (in_array($page, array('profil', 'competences', 'modifier'))) {
         <?php elseif ($page == 'modifier'): ?>
             <a href="frontdessign.php" style="display: inline-block; margin-bottom: 15px; color: #7b2ff7; text-decoration: none; font-weight: 600;">← Retour à l'accueil</a>
             <?php include 'modifier_front.php'; ?>
+        <?php elseif ($page == 'parrainage'): ?>
+            <a href="frontdessign.php" style="display: inline-block; margin-bottom: 15px; color: #7b2ff7; text-decoration: none; font-weight: 600;">← Retour à l'accueil</a>
+            <?php include 'parrainage_front.php'; ?>
         <?php else: ?>
             <div class="hero">
                 <h1>Échange tes <span>compétences</span><br>sans dépenser d'argent</h1>

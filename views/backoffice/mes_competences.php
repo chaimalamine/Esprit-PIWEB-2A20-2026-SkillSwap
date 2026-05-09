@@ -189,6 +189,7 @@ $edit_id = isset($_GET['edit_id']) ? $_GET['edit_id'] : '';
     <a href="design.php">Dashboard</a>
     <a href="liste_users.php">Liste des utilisateurs</a>
     <a href="mes_competences.php" class="active">Mes Compétences</a>
+    <a href="liste_parrainages.php">🤝 Parrainages</a>
     <a href="#">Offres</a>
     <a href="#">Messages</a>
     <a href="profil.php">Profil</a>
