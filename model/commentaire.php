@@ -12,15 +12,37 @@ class commentaire {
     }
 
     // Getters
-    public function getIdcom(): int { return $this->idcom; }
-    public function getContenu(): string { return $this->contenu; }
-    public function getDatecom(): string { return $this->datecom; }
-    public function getIdpost(): int { return $this->idpost; }
+    public function getIdcom(): int {
+        return $this->idcom;
+    }
+
+    public function getContenu(): string {
+        return $this->contenu;
+    }
+
+    public function getDatecom(): string {
+        return $this->datecom;
+    }
+
+    public function getIdpost(): int {
+        return $this->idpost;
+    }
 
     // Setters
-    public function setIdcom(int $idcom): void { $this->idcom = $idcom; }
-    public function setContenu(string $contenu): void { $this->contenu = $contenu; }
-    public function setDatecom(string $datecom): void { $this->datecom = $datecom; }
-    public function setIdpost(int $idpost): void { $this->idpost = $idpost; }
+    public function setIdcom(int $idcom): void {
+        $this->idcom = $idcom;
+    }
+
+    public function setContenu(string $contenu): void {
+        $this->contenu = $contenu;
+    }
+
+    public function setDatecom(string $datecom): void {
+        $this->datecom = $datecom;
+    }
+
+    public function setIdpost(int $idpost): void {
+        $this->idpost = $idpost;
+    }
 }
 ?>
