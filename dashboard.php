@@ -7,7 +7,7 @@ require_once 'controller/RessourceController.php';
 
 session_start();
 
-// SIMULATION DE CONNEXION (À SUPPRIMER PLUS TARD) 
+// SIMULATION DE CONNEXION A supp lors de l integration 
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['user_id'] = 1; 
 }
@@ -240,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_ressource'])) 
     $statut = trim($_POST['statut'] ?? 'Disponible');
     $date_achat = trim($_POST['date_achat'] ?? ''); 
     
-    // NOUVEAU : Récupération des champs Premium
+    // Récupération des champs Premium
     $est_premium = isset($_POST['est_premium']) ? 1 : 0;
     $cout_credit = intval($_POST['cout_credit'] ?? 30);
 
@@ -897,7 +897,7 @@ function performConflictCheck() {
 function closeModal(modalId) {
      document.getElementById(modalId).classList.remove('active'); 
     }
-    
+
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m){
     m.classList.remove('active');} }));
 
