@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/controller/EventController.php';
 require_once __DIR__ . '/controller/RessourceController.php';
@@ -476,3 +477,4 @@ if(chatBtn && chatInput) {
 
 </body>
 </html>
+
